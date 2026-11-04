@@ -7,5 +7,5 @@ cd "$BACKUP_DIR"
 git add -A
 if ! git diff --cached --quiet; then
   git commit -qm "backup $(date +%F)"
-  git push -q
+  git push -q origin HEAD
 fi
