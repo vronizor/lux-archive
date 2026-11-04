@@ -9,9 +9,12 @@ The master index of Vincent's film rolls: one record per roll, four stages, and 
 ## Run on the Pi
 
 ```bash
-cd ~ && git clone git@github.com:vronizor/lux-archive.git && cd lux-archive
+cd ~ && git clone git@github.com:vronizor/lux-archive-data.git
+git clone git@github.com:vronizor/lux-archive.git && cd lux-archive
 docker compose up -d --build
 ```
+
+Clone the data repo first: if `../lux-archive-data` doesn't exist, Docker creates it as an empty root-owned folder and the backup clone then fails.
 
 The app listens on `127.0.0.1:8410` (set `LUX_PORT` in `.env` to change it). Expose it on the tailnet as `photos`, the same way as the other services, e.g.:
 
