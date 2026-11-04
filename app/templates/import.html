@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Import · {{ app_name }}{% endblock %}
+{% block main %}
+<section class="card">
+  <h1>Import rolls from CSV</h1>
+  <p>For rolls you already numbered on paper. One row per roll; existing IDs are skipped, never overwritten.</p>
+  <pre class="sample">id,start,end,contents,binder,sleeve,stock,camera,scanned
+V001,Summer 2011,Autumn 2011,Interrail,B1,1,HP5,OM-10,yes
+V002,2012,,Grandparents' house,B1,2,,,</pre>
+  <p class="small muted">Dates accept “Summer 2014”, “Su14”, “2014”, and French, Catalan or Spanish season names. A file exported from this app imports as-is (that's also how a backup is restored).</p>
+  <form method="post" action="/import" enctype="multipart/form-data" class="photoform">
+    <input type="file" name="file" accept=".csv,text/csv" required aria-label="CSV file">
+    <button class="btn primary">Import</button>
+  </form>
+</section>
+{% if result %}
+<section class="card">
+  <h2>Result</h2>
+  <p><strong>{{ result.added|length }}</strong> added{% if result.added %}: <span class="mono">{{ result.added|join(', ') }}</span>{% endif %}</p>
+  {% if result.skipped %}<p>{{ result.skipped|length }} skipped (already exist): <span class="mono">{{ result.skipped|join(', ') }}</span></p>{% endif %}
+  {% for e in result.errors %}<p class="err">{{ e }}</p>{% endfor %}
+  <a class="btn" href="/rolls">Open the index</a>
+</section>
+{% endif %}
+{% endblock %}

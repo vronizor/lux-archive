@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}File a roll · {{ app_name }}{% endblock %}
+{% block main %}
+{% if saved %}<p class="toast" role="status">{{ saved }} filed. Next one.</p>{% endif %}
+{% if error %}<p class="toast err" role="alert">{{ error }}</p>{% endif %}
+<form class="card lit rollform" method="post" action="/rolls" enctype="multipart/form-data">
+  <div class="formhead">
+    <label class="idfield">
+      <span class="sr">Roll ID</span>
+      <input name="id" value="{{ d.id }}" class="edge-input" autocomplete="off" spellcheck="false">
+    </label>
+    <label class="check"><input type="checkbox" name="filed" value="1" checked> Filed in binder</label>
+  </div>
+  {% set autofocus = true %}
+  {% include "_fields.html" %}
+  <div class="f wide photo-in">
+    <label for="photo">Sleeve photo <span class="muted">(optional, ticks Photographed)</span></label>
+    <input id="photo" type="file" name="photo" accept="image/*" capture="environment">
+  </div>
+  <div class="actions">
+    <button class="btn primary" name="action" value="next">Save &amp; next</button>
+    <button class="btn" name="action" value="open">Save &amp; open</button>
+  </div>
+</form>
+<p class="muted small center">Enter saves and opens a fresh form. ID, date, binder and sleeve carry over from the last roll.</p>
+{% endblock %}

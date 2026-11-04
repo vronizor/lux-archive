@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block main %}
+{% if counts.total == 0 %}
+<section class="empty card lit">
+  <p class="edge">V001 ▸ 00</p>
+  <h1>The archive is empty.</h1>
+  <p>Every roll you file gets the next number. Start with the one in your hand.</p>
+  <a class="btn primary big" href="/add">File the first roll</a>
+  <p class="muted small">Already numbered some on paper? <a href="/import">Import a CSV</a>.</p>
+</section>
+{% else %}
+<section class="hero">
+  <div class="hero-text">
+    <p class="edge">{{ counts.total }} rolls known · {{ counts.done }} done</p>
+    {% if last %}
+    <p class="last">Last session <strong>{{ last.when }}</strong>: {{ last.what }} <span class="muted">· {{ last.duration }}</span></p>
+    {% endif %}
+  </div>
+  <a class="btn primary big" href="/add">+ File a roll</a>
+</section>
+
+<section class="frames">
+  {% for s in stages %}
+  <a class="frame-stat s-{{ s }}" href="/rolls?stage={{ {'filed':'all','photographed':'need-photo','scanned':'need-scan','linked':'need-link'}[s] }}">
+    <span class="n">{{ counts[s] }}</span>
+    <span class="lbl">{{ stage_label[s] }}</span>
+    <span class="edge tiny">{{ loop.index }}/4</span>
+  </a>
+  {% endfor %}
+</section>
+
+<div class="grid2">
+  <section class="card">
+    <h2>Progress</h2>
+    {{ chart }}
+    <p class="muted small">Cumulative rolls per stage. A newly found old roll pushes the filed line up; nothing goes backwards.</p>
+  </section>
+
+  <section class="card">
+    <h2>Sessions <span class="muted">· last 12 weeks · {{ n_sessions }} total</span></h2>
+    <div class="strip" role="img" aria-label="Days with a session in the last 12 weeks">
+      {% for col in strip %}
+      <div class="strip-col">
+        {% for d in col %}
+        <span class="cell {{ 'on' if d.rolls }} {{ 'future' if d.future }}" title="{{ d.date.strftime('%a %d %b') }}{% if d.rolls %} · {{ d.rolls }} rolls{% endif %}"></span>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    <h2 class="mt">Next up</h2>
+    <ul class="nextup">
+      <li><a href="/rolls?stage=need-photo"><span class="n">{{ counts.need_photo }}</span> filed, not photographed</a></li>
+      <li><a href="/rolls?stage=need-scan"><span class="n">{{ counts.need_scan }}</span> not scanned</a></li>
+      <li><a href="/rolls?stage=need-link"><span class="n">{{ counts.need_link }}</span> scanned, not linked in digiKam</a></li>
+    </ul>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Recently touched</h2>
+  <ul class="recent">
+    {% for r in recent %}
+    <li><a href="/rolls/{{ r.id }}"><span class="rid">{{ r.id }}</span><span class="when">{{ span(r) }}</span><span class="what">{{ r.contents or '—' }}</span></a></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

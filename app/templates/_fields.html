@@ -1,0 +1,53 @@
+{% macro season_select(name, value) %}
+<select name="{{ name }}" aria-label="Season">
+  <option value="">—</option>
+  {% for s in seasons %}<option {{ 'selected' if value == s }}>{{ s }}</option>{% endfor %}
+</select>
+{% endmacro %}
+<div class="fields">
+  <div class="f contents">
+    <label for="contents">Contents</label>
+    <input id="contents" name="contents" value="{{ d.contents or '' }}" placeholder="Pyrenees bike trip, Gràcia party" autocomplete="off" {{ 'autofocus' if autofocus }}>
+  </div>
+  <div class="f date">
+    <label>From</label>
+    <div class="pair">
+      {{ season_select('start_season', d.start_season) }}
+      <input name="start_year" value="{{ d.start_year or '' }}" inputmode="numeric" pattern="[0-9]*" placeholder="Year" aria-label="Start year">
+    </div>
+  </div>
+  <div class="f date">
+    <label>To <span class="muted">(blank if same)</span></label>
+    <div class="pair">
+      {{ season_select('end_season', d.end_season) }}
+      <input name="end_year" value="{{ d.end_year or '' }}" inputmode="numeric" pattern="[0-9]*" placeholder="Year" aria-label="End year">
+    </div>
+  </div>
+  <div class="f short">
+    <label for="binder">Binder</label>
+    <input id="binder" name="binder" value="{{ d.binder or '' }}" list="binders" autocomplete="off">
+  </div>
+  <div class="f short">
+    <label for="sleeve">Sleeve</label>
+    <input id="sleeve" name="sleeve" value="{{ d.sleeve or '' }}" inputmode="numeric" pattern="[0-9]*">
+  </div>
+  <div class="f">
+    <label for="stock">Stock</label>
+    <input id="stock" name="stock" value="{{ d.stock or '' }}" list="stocks" autocomplete="off" placeholder="optional">
+  </div>
+  <div class="f">
+    <label for="camera">Camera</label>
+    <input id="camera" name="camera" value="{{ d.camera or '' }}" list="cameras" autocomplete="off" placeholder="optional">
+  </div>
+  <div class="f wide">
+    <label for="scan_ref">Scan folder / prefix</label>
+    <input id="scan_ref" name="scan_ref" value="{{ d.scan_ref or '' }}" autocomplete="off" placeholder="optional">
+  </div>
+  <div class="f wide">
+    <label for="notes">Notes</label>
+    <textarea id="notes" name="notes" rows="2" placeholder="optional">{{ d.notes or '' }}</textarea>
+  </div>
+</div>
+<datalist id="stocks">{% for s in stocks %}<option value="{{ s }}">{% endfor %}</datalist>
+<datalist id="cameras">{% for s in cameras %}<option value="{{ s }}">{% endfor %}</datalist>
+<datalist id="binders">{% for s in binders %}<option value="{{ s }}">{% endfor %}</datalist>

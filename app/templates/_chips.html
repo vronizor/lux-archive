@@ -1,0 +1,1 @@
+<span class="chips" data-roll="{{ r.id }}">{% for s in stages %}{% set st = stage_state(r, s) %}<button type="button" class="chip {{ st }} s-{{ s }}" data-stage="{{ s }}" data-state="{{ st }}" title="{{ stage_label[s] }}{{ ' (skipped)' if st == 'skip' }}" aria-label="{{ stage_label[s] }}: {{ st }}">{{ stage_label[s][0] }}</button>{% endfor %}</span>

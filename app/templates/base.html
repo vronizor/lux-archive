@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}{{ app_name }}{% endblock %}</title>
+<script>
+try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css?v=1">
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<meta name="theme-color" content="#f3eee4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e0c0b" media="(prefers-color-scheme: dark)">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">
+    <svg class="mark" viewBox="0 0 32 24" aria-hidden="true">
+      <g class="sprockets">{% for i in range(7) %}<rect x="{{ 2.6 + i*4 }}" y="0.6" width="2" height="1.6" rx=".5"/><rect x="{{ 2.6 + i*4 }}" y="21.8" width="2" height="1.6" rx=".5"/>{% endfor %}</g>
+      {% for row in range(3) %}{% for col in range(4) %}
+      <rect class="{{ 'lit' if row == 1 and col == 2 else 'frame' }}" x="{{ 1.6 + col*7.4 }}" y="{{ 3.6 + row*5.8 }}" width="6.2" height="4.6" rx=".6"/>
+      {% endfor %}{% endfor %}
+    </svg>
+    <span class="wordmark">{{ app_name }}</span>
+  </a>
+  <nav>
+    <a href="/rolls" class="{{ 'on' if request.url.path.startswith('/rolls') }}">Index</a>
+    <a href="/add" class="add {{ 'on' if request.url.path == '/add' }}">+ Roll</a>
+    <button type="button" class="lamp" id="lamp" aria-label="Switch between light table and darkroom">
+      <span class="bulb" aria-hidden="true"></span><span class="lamp-label"></span>
+    </button>
+  </nav>
+</header>
+<div class="sprocket-rule" aria-hidden="true"></div>
+<main>
+{% block main %}{% endblock %}
+</main>
+<script src="/static/app.js?v=1" defer></script>
+</body>
+</html>

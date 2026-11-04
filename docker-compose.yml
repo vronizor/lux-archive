@@ -1,0 +1,13 @@
+services:
+  lux:
+    build: .
+    container_name: lux-archive
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Paris
+      APP_NAME: ${APP_NAME:-Lux Archive}
+    ports:
+      - "127.0.0.1:${LUX_PORT:-8410}:8000"
+    volumes:
+      - ./data:/data
+      - ${BACKUP_DIR:-../lux-archive-data}:/backup

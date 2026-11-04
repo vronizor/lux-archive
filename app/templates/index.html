@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Index · {{ app_name }}{% endblock %}
+{% block main %}
+<form class="toolbar" method="get" action="/rolls">
+  <input type="hidden" name="stage" value="{{ stage }}">
+  <input type="hidden" name="sort" value="{{ sort }}">
+  <input class="search" type="search" name="q" value="{{ q }}" placeholder="Search contents, stock, binder…">
+  <div class="seg" role="group" aria-label="Sort">
+    <a class="{{ 'on' if sort == 'id' }}" href="?stage={{ stage }}&sort=id&q={{ q|urlencode }}">By ID</a>
+    <a class="{{ 'on' if sort == 'date' }}" href="?stage={{ stage }}&sort=date&q={{ q|urlencode }}">By date</a>
+  </div>
+</form>
+<nav class="pills" aria-label="Filter">
+  {% for key, (label, _) in filters.items() %}
+  {% set n = {'all': counts.total, 'todo': counts.total - counts.done, 'need-photo': counts.need_photo, 'need-scan': counts.need_scan, 'need-link': counts.need_link, 'done': counts.done}[key] %}
+  <a class="pill {{ 'on' if stage == key }}" href="?stage={{ key }}&sort={{ sort }}&q={{ q|urlencode }}">{{ label }} <span class="n">{{ n }}</span></a>
+  {% endfor %}
+</nav>
+
+<div class="bulkbar" id="bulkbar" hidden>
+  <span><strong id="bulkcount">0</strong> selected</span>
+  <select id="bulkstage" aria-label="Stage">
+    {% for s in stages %}<option value="{{ s }}" {{ 'selected' if s == 'scanned' }}>{{ stage_label[s] }}</option>{% endfor %}
+  </select>
+  <button class="btn small primary" data-bulk="done">Mark</button>
+  <button class="btn small" data-bulk="skip" id="bulkskip">Skip</button>
+  <button class="btn small ghost" data-bulk="clear">Unmark</button>
+  <button class="btn small ghost" id="bulknone">Clear selection</button>
+</div>
+
+{% if rolls %}
+<table class="rolls">
+  <thead>
+    <tr>
+      <th class="sel"><input type="checkbox" id="selall" aria-label="Select all"></th>
+      <th>Roll</th><th>When</th><th>Contents</th><th>Where</th><th>Stages</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rolls %}
+    <tr class="{{ 'done' if is_done(r) }}">
+      <td class="sel"><input type="checkbox" class="rowsel" value="{{ r.id }}" aria-label="Select {{ r.id }}"></td>
+      <td class="rid"><a href="/rolls/{{ r.id }}">{{ r.id }}</a></td>
+      <td class="when">{{ span(r) }}</td>
+      <td class="what"><a href="/rolls/{{ r.id }}">{{ r.contents or '—' }}</a>{% if r.stock %}<span class="muted"> · {{ r.stock }}</span>{% endif %}</td>
+      <td class="where">{{ r.binder }}{% if r.sleeve %}/{{ r.sleeve }}{% endif %}</td>
+      <td class="stg">{% include "_chips.html" %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="muted small">Tap a letter to tick a stage; tap P again to mark it skipped. Shift-click checkboxes to select a range.</p>
+{% else %}
+<p class="card muted">Nothing here{% if q %} for “{{ q }}”{% endif %}.</p>
+{% endif %}
+<p class="foot small"><a href="/export.csv">Export CSV</a> · <a href="/import">Import CSV</a></p>
+{% endblock %}
