@@ -12,6 +12,21 @@ _ALIASES = {
 }
 
 
+PROCESSES = {"colour": "Colour", "bw": "B&W", "slide": "Slide"}
+
+_PROCESS_ALIASES = {
+    "colour": "colour", "color": "colour", "c": "colour", "c41": "colour", "c-41": "colour", "couleur": "colour",
+    "color negative": "colour", "colour negative": "colour",
+    "bw": "bw", "b&w": "bw", "b/w": "bw", "b+w": "bw", "nb": "bw", "n&b": "bw", "n/b": "bw", "noir et blanc": "bw",
+    "black and white": "bw", "blanc i negre": "bw", "blanco y negro": "bw", "byn": "bw",
+    "slide": "slide", "e6": "slide", "e-6": "slide", "diapo": "slide", "diapositive": "slide", "reversal": "slide",
+}
+
+
+def norm_process(value):
+    return _PROCESS_ALIASES.get(str(value or "").strip().lower())
+
+
 def norm_season(value):
     if not value:
         return None

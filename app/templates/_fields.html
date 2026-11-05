@@ -38,6 +38,13 @@
     <label for="stock">Stock</label>
     <input id="stock" name="stock" value="{{ d.stock or '' }}" list="stocks" autocomplete="off" placeholder="optional">
   </div>
+  <div class="f wide">
+    <span class="flabel" id="process-label">Film</span>
+    <div class="radioseg" role="radiogroup" aria-labelledby="process-label">
+      <label><input type="radio" name="process" value="" {{ 'checked' if not d.process }}><span>?</span></label>
+      {% for key, name in processes.items() %}<label><input type="radio" name="process" value="{{ key }}" {{ 'checked' if d.process == key }}><span>{{ name }}</span></label>{% endfor %}
+    </div>
+  </div>
   <div class="f">
     <label for="camera">Camera</label>
     <input id="camera" name="camera" value="{{ d.camera or '' }}" list="cameras" autocomplete="off" placeholder="optional">

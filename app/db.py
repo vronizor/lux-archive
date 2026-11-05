@@ -11,8 +11,10 @@ STAGES = ["filed", "photographed", "scanned", "linked"]
 
 FIELDS = [
     "start_year", "start_season", "end_year", "end_season", "date_tbc", "contents",
-    "binder", "sleeve", "stock", "camera", "scan_ref", "notes",
+    "binder", "sleeve", "stock", "process", "camera", "scan_ref", "notes",
 ]
+
+ADDED_COLUMNS = {"date_tbc": "INTEGER DEFAULT 0", "process": "TEXT"}
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS rolls (
@@ -24,7 +26,7 @@ CREATE TABLE IF NOT EXISTS rolls (
     sort_key INTEGER,
     contents TEXT DEFAULT '',
     binder TEXT DEFAULT '', sleeve INTEGER,
-    stock TEXT DEFAULT '', camera TEXT DEFAULT '',
+    stock TEXT DEFAULT '', process TEXT, camera TEXT DEFAULT '',
     scan_ref TEXT DEFAULT '', notes TEXT DEFAULT '',
     photo TEXT,
     filed_at TEXT, photographed_at TEXT, photographed_skipped INTEGER DEFAULT 0,
@@ -60,8 +62,9 @@ def init():
     with connect() as conn:
         conn.executescript(SCHEMA)
         cols = {r["name"] for r in conn.execute("PRAGMA table_info(rolls)")}
-        if "date_tbc" not in cols:
-            conn.execute("ALTER TABLE rolls ADD COLUMN date_tbc INTEGER DEFAULT 0")
+        for col, decl in ADDED_COLUMNS.items():
+            if col not in cols:
+                conn.execute(f"ALTER TABLE rolls ADD COLUMN {col} {decl}")
 
 
 def get_db():

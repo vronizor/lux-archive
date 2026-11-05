@@ -47,7 +47,7 @@ docker compose exec -T lux python -m app.backup restore /backup
 
 ## Import rolls numbered on paper
 
-*Index → Import CSV.* Columns: `id,start,end,contents,binder,sleeve,stock,camera,scanned`. Dates accept `Summer 2014`, `Su14`, `2014`, and French/Catalan/Spanish season names. A `?` anywhere in a date (`Su14?`) or a truthy optional `tbc` column flags the roll as *Year TBC*. Existing IDs are skipped, never overwritten.
+*Index → Import CSV.* Columns: `id,start,end,contents,binder,sleeve,stock,camera,scanned`, plus an optional `process` column (`colour`/`C-41`, `B&W`/`N&B`, `slide`/`E-6`). Dates accept `Summer 2014`, `Su14`, `2014`, and French/Catalan/Spanish season names. A `?` anywhere in a date (`Su14?`) or a truthy optional `tbc` column flags the roll as *Year TBC*. Existing IDs are skipped, never overwritten.
 
 ## Config
 

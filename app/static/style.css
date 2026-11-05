@@ -233,6 +233,19 @@ input[type="checkbox"] { width: auto; }
 .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 9px; overflow: hidden; }
 .seg a { padding: .5rem .8rem; text-decoration: none; color: var(--muted); font-size: .9rem; }
 .seg a.on { background: var(--surface); color: var(--ink); font-weight: 500; }
+.flabel { font-size: .78rem; font-weight: 500; color: var(--muted); }
+.radioseg { display: flex; border: 1px solid var(--line-strong); border-radius: 9px; overflow: hidden; background: var(--bg); }
+.radioseg label { flex: 1; position: relative; }
+.radioseg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.radioseg span { display: block; text-align: center; padding: .5rem .4rem; color: var(--muted); font-size: .9rem; border-left: 1px solid var(--line); }
+.radioseg label:first-child span { border-left: 0; flex: 0; }
+.radioseg label:first-child { flex: 0 0 2.6rem; }
+.radioseg input:checked + span { background: var(--surface); color: var(--ink); font-weight: 500; box-shadow: inset 0 -2px 0 var(--accent); }
+.radioseg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
+.proc {
+  display: inline-block; font-size: .68rem; font-weight: 500; letter-spacing: .04em; line-height: 1;
+  padding: .18rem .35rem; border-radius: 4px; border: 1px solid var(--line-strong); color: var(--muted); vertical-align: .1em;
+}
 .pills { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .pill {
   text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: .3rem .75rem;

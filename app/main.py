@@ -32,6 +32,7 @@ templates = Jinja2Templates(directory=HERE / "templates")
 templates.env.globals.update(
     app_name=APP_NAME,
     seasons=seasons.SEASONS,
+    processes=seasons.PROCESSES,
     span=seasons.span,
     when=when,
     stages=STAGES,
@@ -43,7 +44,7 @@ templates.env.globals.update(
 
 EXPORT_COLS = [
     "id", "start_year", "start_season", "end_year", "end_season", "date_tbc", "contents", "binder", "sleeve",
-    "stock", "camera", "scan_ref", "notes", "photo", "filed_at", "photographed_at",
+    "stock", "process", "camera", "scan_ref", "notes", "photo", "filed_at", "photographed_at",
     "photographed_skipped", "scanned_at", "linked_at", "created_at", "updated_at",
 ]
 
@@ -100,6 +101,7 @@ def clean_fields(form):
         "binder": (form.get("binder") or "").strip(),
         "sleeve": intval(form.get("sleeve")),
         "stock": (form.get("stock") or "").strip(),
+        "process": seasons.norm_process(form.get("process")),
         "camera": (form.get("camera") or "").strip(),
         "scan_ref": (form.get("scan_ref") or "").strip(),
         "notes": (form.get("notes") or "").strip(),
@@ -143,6 +145,7 @@ def add_form(request: Request, saved: str = "", error: str = "", conn=Depends(ge
         "binder": last["binder"] if last else "B1",
         "sleeve": (last["sleeve"] + 1) if last and last["sleeve"] else 1,
         "camera": last["camera"] if last else "",
+        "process": last["process"] if last else None,
     }
     return render(
         request, "add.html", d=defaults, saved=saved, error=error,
@@ -168,18 +171,21 @@ async def create_roll(request: Request, conn=Depends(get_db)):
 
 
 @app.get("/rolls", response_class=HTMLResponse)
-def index(request: Request, sort: str = "id", stage: str = "all", q: str = "", conn=Depends(get_db)):
+def index(request: Request, sort: str = "id", stage: str = "all", q: str = "", process: str = "", conn=Depends(get_db)):
     label, where = FILTERS.get(stage, FILTERS["all"])
     params = []
+    process = process if process in seasons.PROCESSES or process == "unset" else ""
+    scope, scope_params = ("process IS NULL", []) if process == "unset" else ("process=?", [process]) if process else ("1=1", [])
+    where, params = f"({where}) AND {scope}", [*scope_params]
     if q.strip():
         like = f"%{q.strip()}%"
         where += " AND (id LIKE ? OR contents LIKE ? OR notes LIKE ? OR stock LIKE ? OR camera LIKE ? OR scan_ref LIKE ? OR binder LIKE ?)"
-        params = [like] * 7
+        params += [like] * 7
     order = "sort_key IS NULL, sort_key, num" if sort == "date" else "num"
     rows = conn.execute(f"SELECT * FROM rolls WHERE {where} ORDER BY {order}", params).fetchall()
-    all_rolls = conn.execute("SELECT * FROM rolls").fetchall()
+    all_rolls = conn.execute(f"SELECT * FROM rolls WHERE {scope}", scope_params).fetchall()
     return render(
-        request, "index.html", rolls=rows, sort=sort, stage=stage, q=q,
+        request, "index.html", rolls=rows, sort=sort, stage=stage, q=q, process=process,
         filters=FILTERS, counts=stats.counts(all_rolls),
     )
 

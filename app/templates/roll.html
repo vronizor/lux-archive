@@ -13,7 +13,7 @@
   <a class="nav-arrow {{ 'off' if not nav.prev }}" href="{{ '/rolls/' ~ nav.prev if nav.prev else '#' }}" aria-label="Previous roll">‹</a>
   <div>
     <h1 class="edge big">{{ r.id }} <span class="tri">▸</span> <span class="sub">{{ when(r) }}</span></h1>
-    <p class="what">{{ r.contents or 'No description yet' }}</p>
+    <p class="what">{{ r.contents or 'No description yet' }}{% if r.process %} <span class="proc p-{{ r.process }}">{{ processes[r.process] }}</span>{% endif %}</p>
   </div>
   <a class="nav-arrow {{ 'off' if not nav.next }}" href="{{ '/rolls/' ~ nav.next if nav.next else '#' }}" aria-label="Next roll">›</a>
 </section>
