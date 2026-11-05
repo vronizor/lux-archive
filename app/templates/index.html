@@ -1,28 +1,64 @@
 {% extends "base.html" %}
 {% block title %}Index · {{ app_name }}{% endblock %}
 {% block page %}index{% endblock %}
+{% block keys %}
+{{ row(['f'], 'Open filters') }}
+{% endblock %}
+{% macro keep(skip=()) %}{% for k, v in state.items() if k not in skip %}{% if v is string or v is number %}{% if v != '' %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endif %}{% else %}{% for x in v %}<input type="hidden" name="{{ k }}" value="{{ x }}">{% endfor %}{% endif %}{% endfor %}{% endmacro %}
+{% macro arrow(key) %}<span class="ar">{{ ('↓' if dir == 'desc' else '↑') if sort == key else '↕' }}</span>{% endmacro %}
 {% block main %}
-{% set cur = {'stage': stage, 'sort': sort, 'process': process, 'q': q} %}
-{% macro url() %}{% set u = dict(cur, **kwargs) %}?stage={{ u.stage }}&sort={{ u.sort }}{% if u.process %}&process={{ u.process }}{% endif %}&q={{ u.q|urlencode }}{% endmacro %}
-<form class="toolbar" method="get" action="/rolls">
-  <input type="hidden" name="stage" value="{{ stage }}">
-  <input type="hidden" name="sort" value="{{ sort }}">
-  {% if process %}<input type="hidden" name="process" value="{{ process }}">{% endif %}
-  <input class="search" type="search" name="q" value="{{ q }}" placeholder="Search contents, stock, binder…">
-  <div class="seg" role="group" aria-label="Sort">
-    <a class="{{ 'on' if sort == 'id' }}" href="{{ url(sort='id') }}">By ID</a>
-    <a class="{{ 'on' if sort == 'date' }}" href="{{ url(sort='date') }}">By date</a>
+<div class="toolbar">
+  <form class="searchform" method="get" action="/rolls">
+    {{ keep(skip=('q',)) }}
+    <input class="search" type="search" name="q" value="{{ q }}" placeholder="Search contents, stock, camera, binder…">
+  </form>
+  <div class="seg sort-phone" role="group" aria-label="Sort">
+    <a class="{{ 'on' if sort == 'id' }}" href="{{ sort_link('id') }}">ID{% if sort == 'id' %} {{ arrow('id') }}{% endif %}</a>
+    <a class="{{ 'on' if sort == 'date' }}" href="{{ sort_link('date') }}">Date{% if sort == 'date' %} {{ arrow('date') }}{% endif %}</a>
   </div>
-  <div class="seg" role="group" aria-label="Film">
-    <a class="{{ 'on' if not process }}" href="{{ url(process='') }}">All film</a>
-    {% for key, name in processes.items() %}<a class="{{ 'on' if process == key }}" href="{{ url(process=key) }}">{{ name }}</a>{% endfor %}
-    <a class="{{ 'on' if process == 'unset' }}" href="{{ url(process='unset') }}" title="Film type not set">?</a>
-  </div>
-</form>
+  <details class="filters" id="filters">
+    <summary class="fbtn">Filters{% if active %} <span class="n">{{ active }}</span>{% endif %} <span aria-hidden="true">▾</span></summary>
+    <form class="pop" method="get" action="/rolls">
+      {{ keep(skip=('process', 'camera', 'binder', 'y0', 'y1')) }}
+      {% for f, title in facets.items() %}
+      <fieldset>
+        <legend>{{ title }}</legend>
+        {% for v, n in options[f] %}
+        <label class="{{ 'zero' if not n }}"><span><input type="checkbox" name="{{ f }}" value="{{ v }}" {{ 'checked' if v in chosen[f] }}>{{ facet_label(f, v) }}</span><em>{{ n }}</em></label>
+        {% else %}<p class="muted small">Nothing to filter yet.</p>
+        {% endfor %}
+      </fieldset>
+      {% endfor %}
+      <fieldset>
+        <legend>Years</legend>
+        <div class="yr">
+          <input name="y0" value="{{ ys[0] or '' }}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="From" aria-label="From year">
+          <span>–</span>
+          <input name="y1" value="{{ ys[1] or '' }}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="To" aria-label="To year">
+        </div>
+      </fieldset>
+      <div class="popbar">
+        <a class="btn small ghost" href="{{ link(process=[], camera=[], binder=[], y0='', y1='') }}">Reset</a>
+        <button class="btn small primary">Apply</button>
+      </div>
+    </form>
+  </details>
+</div>
+{% if active %}
+<div class="achips">
+  {% for f in facets %}{% for v in chosen[f] %}
+  <a class="achip" href="{{ without(f, v) }}" title="Remove"><b>{{ facets[f] }}</b> {{ facet_label(f, v) }} <span class="x">×</span></a>
+  {% endfor %}{% endfor %}
+  {% if ys[0] or ys[1] %}
+  <a class="achip" href="{{ link(y0='', y1='') }}" title="Remove"><b>Years</b> {% if ys[0] and ys[1] %}{{ ys[0] }}–{{ ys[1] }}{% elif ys[0] %}from {{ ys[0] }}{% else %}until {{ ys[1] }}{% endif %} <span class="x">×</span></a>
+  {% endif %}
+  <a class="achip clear" href="{{ link(process=[], camera=[], binder=[], y0='', y1='') }}">Clear all</a>
+</div>
+{% endif %}
 <nav class="pills" aria-label="Filter">
   {% for key, (label, _) in filters.items() %}
   {% set n = {'all': counts.total, 'todo': counts.total - counts.done, 'need-photo': counts.need_photo, 'need-scan': counts.need_scan, 'need-link': counts.need_link, 'done': counts.done, 'tbc': counts.tbc}[key] %}
-  <a class="pill {{ 'on' if stage == key }}" href="{{ url(stage=key) }}">{{ label }} <span class="n">{{ n }}</span></a>
+  <a class="pill {{ 'on' if stage == key }}" href="{{ link(stage=key) }}">{{ label }} <span class="n">{{ n }}</span></a>
   {% endfor %}
 </nav>
 
@@ -42,7 +78,9 @@
   <thead>
     <tr>
       <th class="sel"><input type="checkbox" id="selall" aria-label="Select all"></th>
-      <th>Roll</th><th>When</th><th>Contents</th><th>Where</th><th>Stages</th>
+      <th><a class="sortable {{ 'on' if sort == 'id' }}" href="{{ sort_link('id') }}">Roll {{ arrow('id') }}</a></th>
+      <th><a class="sortable {{ 'on' if sort == 'date' }}" href="{{ sort_link('date') }}">When {{ arrow('date') }}</a></th>
+      <th>Contents</th><th>Where</th><th>Stages</th>
     </tr>
   </thead>
   <tbody>
@@ -60,7 +98,7 @@
 </table>
 <p class="muted small">Tap a letter to tick a stage; tap P again to mark it skipped. Shift-click checkboxes to select a range.</p>
 {% else %}
-<p class="card muted">Nothing here{% if q %} for “{{ q }}”{% endif %}.</p>
+<p class="card muted">Nothing here{% if q %} for “{{ q }}”{% endif %}{% if active %} with these filters{% endif %}.</p>
 {% endif %}
 <p class="foot small"><a href="/export.csv">Export CSV</a> · <a href="/import">Import CSV</a></p>
 {% endblock %}

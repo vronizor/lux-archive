@@ -119,6 +119,10 @@
   if (/Mac|iPhone|iPad/.test(navigator.platform)) document.querySelectorAll("kbd.mod").forEach((k) => (k.textContent = "⌘"));
 
   const page = document.body.dataset.page;
+  const filters = document.getElementById("filters");
+  document.addEventListener("click", (ev) => {
+    if (filters?.open && !filters.contains(ev.target)) filters.open = false;
+  });
   if (page === "index" && location.hash === "#search") document.querySelector(".search")?.focus();
   const typing = (el) => el?.isContentEditable || (/^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName) && !/^(checkbox|radio|button|submit|file)$/.test(el.type));
   const go = (url) => (location.href = url);
@@ -134,9 +138,10 @@
       open ? form.requestSubmit(open) : form.requestSubmit();
       return;
     }
-    if (/^(start|end)_year$/.test(t.name) && (ev.key === "ArrowUp" || ev.key === "ArrowDown") && !ev.metaKey && !ev.ctrlKey && !ev.altKey) {
+    const pair = { start_year: "end_year", end_year: "start_year", y0: "y1", y1: "y0" }[t.name];
+    if (pair && (ev.key === "ArrowUp" || ev.key === "ArrowDown") && !ev.metaKey && !ev.ctrlKey && !ev.altKey) {
       ev.preventDefault();
-      const other = t.form?.elements[t.name === "start_year" ? "end_year" : "start_year"];
+      const other = t.form?.elements[pair];
       const cur = parseInt(t.value, 10);
       const thisYear = new Date().getFullYear();
       const next = Number.isNaN(cur)
@@ -144,6 +149,11 @@
         : cur + (ev.key === "ArrowUp" ? 1 : -1);
       t.value = Math.min(thisYear, Math.max(1900, next));
       t.select();
+      return;
+    }
+    if (ev.key === "Escape" && filters?.open) {
+      filters.open = false;
+      filters.querySelector("summary").focus();
       return;
     }
     if (typing(t)) {
@@ -159,6 +169,7 @@
       h: () => go("/"),
       l: () => lamp?.click(),
       "/": () => (page === "index" ? document.querySelector(".search")?.select() : go("/rolls#search")),
+      f: page === "index" && filters ? () => { filters.open = true; filters.querySelector(".pop input[type=checkbox]")?.focus(); } : null,
     }[k] || (page === "roll" && {
       ArrowLeft: () => document.querySelector(".nav-arrow:not(.off)[aria-label^=Prev]")?.click(),
       ArrowRight: () => document.querySelector(".nav-arrow:not(.off)[aria-label^=Next]")?.click(),

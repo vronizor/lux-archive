@@ -3,6 +3,7 @@ import hashlib
 import io
 import os
 from pathlib import Path
+from urllib.parse import urlencode
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -170,23 +171,90 @@ async def create_roll(request: Request, conn=Depends(get_db)):
     return RedirectResponse(f"/add?saved={roll_id}", 303)
 
 
+NONE = "_none"
+FACETS = {"process": "Film", "camera": "Camera", "binder": "Binder"}
+
+
+def facet_value(r, facet):
+    return r[facet] or NONE
+
+
+def year_ok(r, y0, y1):
+    if y0 is None and y1 is None:
+        return True
+    start = r["start_year"]
+    if start is None:
+        return False
+    end = r["end_year"] or start
+    return (y1 is None or start <= y1) and (y0 is None or end >= y0)
+
+
+def to_year(value):
+    value = (value or "").strip()
+    return int(value) if value.isdigit() else None
+
+
 @app.get("/rolls", response_class=HTMLResponse)
-def index(request: Request, sort: str = "id", stage: str = "all", q: str = "", process: str = "", conn=Depends(get_db)):
-    label, where = FILTERS.get(stage, FILTERS["all"])
-    params = []
-    process = process if process in seasons.PROCESSES or process == "unset" else ""
-    scope, scope_params = ("process IS NULL", []) if process == "unset" else ("process=?", [process]) if process else ("1=1", [])
-    where, params = f"({where}) AND {scope}", [*scope_params]
+def index(request: Request, sort: str = "id", dir: str = "asc", stage: str = "all", q: str = "", y0: str = "", y1: str = "", conn=Depends(get_db)):
+    sort = sort if sort in ("id", "date") else "id"
+    dir = dir if dir in ("asc", "desc") else "asc"
+    stage = stage if stage in FILTERS else "all"
+    chosen = {f: [v for v in request.query_params.getlist(f) if v] for f in FACETS}
+    if chosen["process"] == ["unset"]:
+        chosen["process"] = [NONE]
+    ys = (to_year(y0), to_year(y1))
+    if None not in ys and ys[0] > ys[1]:
+        ys = (ys[1], ys[0])
+
+    where, params = FILTERS[stage][1], []
     if q.strip():
         like = f"%{q.strip()}%"
         where += " AND (id LIKE ? OR contents LIKE ? OR notes LIKE ? OR stock LIKE ? OR camera LIKE ? OR scan_ref LIKE ? OR binder LIKE ?)"
         params += [like] * 7
-    order = "sort_key IS NULL, sort_key, num" if sort == "date" else "num"
-    rows = conn.execute(f"SELECT * FROM rolls WHERE {where} ORDER BY {order}", params).fetchall()
-    all_rolls = conn.execute(f"SELECT * FROM rolls WHERE {scope}", scope_params).fetchall()
+    hits = {r["id"] for r in conn.execute(f"SELECT id FROM rolls WHERE {where}", params)}
+    everything = conn.execute("SELECT * FROM rolls ORDER BY num").fetchall()
+
+    def match(r, skip=None):
+        return year_ok(r, *ys) and all(
+            not chosen[f] or facet_value(r, f) in chosen[f] for f in FACETS if f != skip
+        )
+
+    rows = [r for r in everything if r["id"] in hits and match(r)]
+    if sort == "date":
+        dated = sorted((r for r in rows if r["sort_key"] is not None), key=lambda r: (r["sort_key"], r["num"]), reverse=dir == "desc")
+        rows = dated + [r for r in rows if r["sort_key"] is None]
+    elif dir == "desc":
+        rows.reverse()
+
+    options = {}
+    for f in FACETS:
+        pool = [r for r in everything if r["id"] in hits and match(r, skip=f)]
+        values = list(seasons.PROCESSES) if f == "process" else sorted({r[f] for r in everything if r[f]}, key=str.lower)
+        if f == "process" or NONE in chosen[f] or any(not r[f] for r in everything):
+            values = values + [NONE]
+        options[f] = [(v, sum(1 for r in pool if facet_value(r, f) == v)) for v in values]
+
+    state = {"stage": stage, "sort": sort, "dir": dir, "q": q.strip(), "y0": ys[0] or "", "y1": ys[1] or "", **chosen}
+
+    def link(**changes):
+        merged = {**state, **changes}
+        pairs = [(k, v) for k, v in merged.items() if k not in FACETS and v not in ("", None)]
+        pairs += [(f, v) for f in FACETS for v in merged[f]]
+        return "?" + urlencode(pairs)
+
+    def without(facet, value):
+        return link(**{facet: [v for v in chosen[facet] if v != value]})
+
+    def sort_link(key):
+        return link(sort=key, dir="desc" if sort == key and dir == "asc" else "asc")
+
+    label = lambda f, v: "Not set" if v == NONE else seasons.PROCESSES.get(v, v) if f == "process" else v
+    active = sum(len(v) for v in chosen.values()) + (1 if any(ys) else 0)
     return render(
-        request, "index.html", rolls=rows, sort=sort, stage=stage, q=q, process=process,
-        filters=FILTERS, counts=stats.counts(all_rolls),
+        request, "index.html", rolls=rows, sort=sort, dir=dir, stage=stage, q=q.strip(), ys=ys,
+        filters=FILTERS, counts=stats.counts([r for r in everything if match(r)]),
+        facets=FACETS, options=options, chosen=chosen, active=active, state=state,
+        link=link, without=without, sort_link=sort_link, facet_label=label,
     )
 
 
