@@ -14,6 +14,7 @@ def counts(rolls):
     out["need_photo"] = sum(1 for r in rolls if r["filed_at"] and not r["photographed_at"])
     out["need_scan"] = sum(1 for r in rolls if not r["scanned_at"])
     out["need_link"] = sum(1 for r in rolls if r["scanned_at"] and not r["linked_at"])
+    out["tbc"] = sum(1 for r in rolls if r["date_tbc"])
     return out
 
 

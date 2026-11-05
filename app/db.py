@@ -10,7 +10,7 @@ PHOTO_DIR = DATA_DIR / "photos"
 STAGES = ["filed", "photographed", "scanned", "linked"]
 
 FIELDS = [
-    "start_year", "start_season", "end_year", "end_season", "contents",
+    "start_year", "start_season", "end_year", "end_season", "date_tbc", "contents",
     "binder", "sleeve", "stock", "camera", "scan_ref", "notes",
 ]
 
@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS rolls (
     num INTEGER UNIQUE NOT NULL,
     start_year INTEGER, start_season TEXT,
     end_year INTEGER, end_season TEXT,
+    date_tbc INTEGER DEFAULT 0,
     sort_key INTEGER,
     contents TEXT DEFAULT '',
     binder TEXT DEFAULT '', sleeve INTEGER,
@@ -58,6 +59,9 @@ def connect():
 def init():
     with connect() as conn:
         conn.executescript(SCHEMA)
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(rolls)")}
+        if "date_tbc" not in cols:
+            conn.execute("ALTER TABLE rolls ADD COLUMN date_tbc INTEGER DEFAULT 0")
 
 
 def get_db():

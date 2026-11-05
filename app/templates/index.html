@@ -12,7 +12,7 @@
 </form>
 <nav class="pills" aria-label="Filter">
   {% for key, (label, _) in filters.items() %}
-  {% set n = {'all': counts.total, 'todo': counts.total - counts.done, 'need-photo': counts.need_photo, 'need-scan': counts.need_scan, 'need-link': counts.need_link, 'done': counts.done}[key] %}
+  {% set n = {'all': counts.total, 'todo': counts.total - counts.done, 'need-photo': counts.need_photo, 'need-scan': counts.need_scan, 'need-link': counts.need_link, 'done': counts.done, 'tbc': counts.tbc}[key] %}
   <a class="pill {{ 'on' if stage == key }}" href="?stage={{ key }}&sort={{ sort }}&q={{ q|urlencode }}">{{ label }} <span class="n">{{ n }}</span></a>
   {% endfor %}
 </nav>
@@ -41,7 +41,7 @@
     <tr class="{{ 'done' if is_done(r) }}">
       <td class="sel"><input type="checkbox" class="rowsel" value="{{ r.id }}" aria-label="Select {{ r.id }}"></td>
       <td class="rid"><a href="/rolls/{{ r.id }}">{{ r.id }}</a></td>
-      <td class="when">{{ span(r) }}</td>
+      <td class="when">{{ when(r) }}</td>
       <td class="what"><a href="/rolls/{{ r.id }}">{{ r.contents or '—' }}</a>{% if r.stock %}<span class="muted"> · {{ r.stock }}</span>{% endif %}</td>
       <td class="where">{{ r.binder }}{% if r.sleeve %}/{{ r.sleeve }}{% endif %}</td>
       <td class="stg">{% include "_chips.html" %}</td>

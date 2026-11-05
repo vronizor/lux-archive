@@ -5,6 +5,7 @@ The master index of Vincent's film rolls: one record per roll, four stages, and 
 - **Roll IDs** (`V001`, `V002`…) are accession numbers: the next free number, assigned once, never changed or reused. They record when a roll entered the archive, not when it was shot. Chronology lives in the date fields — use *By date* in the index.
 - **Stages:** Filed → Photographed (sleeve on a light pad; can be *skipped* for rolls already scanned) → Scanned → Linked (`V###_FF` files in digiKam). Stages can be ticked in any order. A roll is done when all four are ticked or skipped.
 - **Seasons:** Winter YYYY = Dec YYYY – Feb YYYY+1.
+- **Year TBC:** tick it when you're unsure of the year (an unsure season alone doesn't count). The roll still sorts by its best-guess date; *Year TBC* in the index lists them for a later pass.
 
 ## Run on the Pi
 
@@ -46,7 +47,7 @@ docker compose exec -T lux python -m app.backup restore /backup
 
 ## Import rolls numbered on paper
 
-*Index → Import CSV.* Columns: `id,start,end,contents,binder,sleeve,stock,camera,scanned`. Dates accept `Summer 2014`, `Su14`, `2014`, and French/Catalan/Spanish season names. Existing IDs are skipped, never overwritten.
+*Index → Import CSV.* Columns: `id,start,end,contents,binder,sleeve,stock,camera,scanned`. Dates accept `Summer 2014`, `Su14`, `2014`, and French/Catalan/Spanish season names. A `?` anywhere in a date (`Su14?`) or a truthy optional `tbc` column flags the roll as *Year TBC*. Existing IDs are skipped, never overwritten.
 
 ## Config
 

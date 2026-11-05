@@ -188,6 +188,14 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 16px 4rem; }
 .f.date { grid-column: span 2; }
 .f label { font-size: .78rem; font-weight: 500; color: var(--muted); }
 .pair { display: grid; grid-template-columns: 1.3fr 1fr; gap: .4rem; }
+.tbc-field { margin-top: -.35rem; }
+.tbc-field .check { font-size: .9rem; color: var(--ink); }
+.tbc-field .muted { font-weight: 400; font-size: .82rem; }
+.tbc {
+  display: inline-block; font-size: .66rem; font-weight: 600; letter-spacing: .08em; line-height: 1;
+  padding: .18rem .32rem; border: 1px dashed var(--accent-ink); border-radius: 4px; color: var(--accent-ink);
+  vertical-align: .12em; margin-left: .15rem;
+}
 input, select, textarea {
   font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line-strong);
   border-radius: 9px; padding: .55rem .7rem; width: 100%; min-width: 0;

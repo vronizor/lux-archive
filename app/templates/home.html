@@ -60,7 +60,7 @@
   <h2>Recently touched</h2>
   <ul class="recent">
     {% for r in recent %}
-    <li><a href="/rolls/{{ r.id }}"><span class="rid">{{ r.id }}</span><span class="when">{{ span(r) }}</span><span class="what">{{ r.contents or '—' }}</span></a></li>
+    <li><a href="/rolls/{{ r.id }}"><span class="rid">{{ r.id }}</span><span class="when">{{ when(r) }}</span><span class="what">{{ r.contents or '—' }}</span></a></li>
     {% endfor %}
   </ul>
 </section>

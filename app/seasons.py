@@ -1,3 +1,5 @@
+import re
+
 SEASONS = ["Spring", "Summer", "Autumn", "Winter"]
 
 _OFFSET = {"Spring": 30, "Summer": 60, None: 65, "Autumn": 90, "Winter": 120}
@@ -49,7 +51,7 @@ def span(roll, short=False):
 def parse(text):
     if not text or not str(text).strip():
         return None, None
-    parts = str(text).replace("-", " ").replace("/", " ").split()
+    parts = re.findall(r"[^\W\d_]+|\d+", str(text))
     year, season = None, None
     for p in parts:
         if p.isdigit():

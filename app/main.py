@@ -7,13 +7,22 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Upload
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from markupsafe import Markup
+from markupsafe import Markup, escape
 from PIL import Image, ImageOps
 
 from . import db, seasons, stats
 from .db import STAGES, get_db, now
 
 APP_NAME = os.environ.get("APP_NAME", "Lux Archive")
+TRUTHY = ("1", "on", "true", "yes", "y")
+
+
+def when(roll, short=False):
+    text = escape(seasons.span(roll, short))
+    if roll["date_tbc"]:
+        text += Markup(' <span class="tbc" title="Year to be confirmed">TBC</span>')
+    return Markup(text)
+
 HERE = Path(__file__).parent
 
 app = FastAPI(title=APP_NAME, docs_url=None, redoc_url=None)
@@ -23,6 +32,7 @@ templates.env.globals.update(
     app_name=APP_NAME,
     seasons=seasons.SEASONS,
     span=seasons.span,
+    when=when,
     stages=STAGES,
     stage_state=db.stage_state,
     is_done=db.is_done,
@@ -30,7 +40,7 @@ templates.env.globals.update(
 )
 
 EXPORT_COLS = [
-    "id", "start_year", "start_season", "end_year", "end_season", "contents", "binder", "sleeve",
+    "id", "start_year", "start_season", "end_year", "end_season", "date_tbc", "contents", "binder", "sleeve",
     "stock", "camera", "scan_ref", "notes", "photo", "filed_at", "photographed_at",
     "photographed_skipped", "scanned_at", "linked_at", "created_at", "updated_at",
 ]
@@ -42,6 +52,7 @@ FILTERS = {
     "need-scan": ("To scan", "scanned_at IS NULL"),
     "need-link": ("To link", "scanned_at IS NOT NULL AND linked_at IS NULL"),
     "done": ("Done", "filed_at IS NOT NULL AND photographed_at IS NOT NULL AND scanned_at IS NOT NULL AND linked_at IS NOT NULL"),
+    "tbc": ("Year TBC", "date_tbc=1"),
 }
 
 
@@ -81,6 +92,7 @@ def clean_fields(form):
         "start_season": start_season,
         "end_year": end_year,
         "end_season": end_season,
+        "date_tbc": int(str(form.get("date_tbc") or "").strip().lower() in TRUTHY),
         "sort_key": seasons.sort_key(start_year, start_season),
         "contents": (form.get("contents") or "").strip(),
         "binder": (form.get("binder") or "").strip(),
@@ -297,7 +309,11 @@ def import_rows(conn, rows):
         else:
             sy, ss = seasons.parse(row.get("start"))
             ey, es = seasons.parse(row.get("end"))
-            form = {**row, "start_year": str(sy or ""), "start_season": ss, "end_year": str(ey or ""), "end_season": es}
+            unsure = "?" in row.get("start", "") + row.get("end", "") or row.get("tbc", "").lower() in TRUTHY
+            form = {
+                **row, "start_year": str(sy or ""), "start_season": ss, "end_year": str(ey or ""), "end_season": es,
+                "date_tbc": "1" if unsure else "",
+            }
         fields = clean_fields(form)
         is_filed = bool(row.get("filed_at")) if "filed_at" in row else True
         filed = row.get("filed_at") or now()

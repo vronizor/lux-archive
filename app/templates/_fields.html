@@ -23,6 +23,9 @@
       <input name="end_year" value="{{ d.end_year or '' }}" inputmode="numeric" pattern="[0-9]*" placeholder="Year" aria-label="End year">
     </div>
   </div>
+  <div class="f wide tbc-field">
+    <label class="check"><input type="checkbox" name="date_tbc" value="1" {{ 'checked' if d.date_tbc }}> Year TBC <span class="muted">— not sure of the year</span></label>
+  </div>
   <div class="f short">
     <label for="binder">Binder</label>
     <input id="binder" name="binder" value="{{ d.binder or '' }}" list="binders" autocomplete="off">
