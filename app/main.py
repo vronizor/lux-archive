@@ -155,6 +155,8 @@ async def create_roll(request: Request, conn=Depends(get_db)):
     if conn.execute("SELECT 1 FROM rolls WHERE num=?", (num,)).fetchone():
         return RedirectResponse(f"/add?error={db.format_id(num)}+already+exists", 303)
     roll_id = insert_roll(conn, num, clean_fields(form), filed=bool(form.get("filed")))
+    if form.get("scanned"):
+        db.set_stage(conn, roll_id, "scanned", "done")
     upload = form.get("photo")
     if upload is not None and getattr(upload, "filename", ""):
         save_photo(conn, roll_id, await upload.read())
@@ -197,10 +199,14 @@ def roll_page(request: Request, roll_id: str, saved: int = 0, conn=Depends(get_d
 @app.post("/rolls/{roll_id}")
 async def update_roll(request: Request, roll_id: str, conn=Depends(get_db)):
     r = fetch_roll(conn, roll_id)
-    fields = clean_fields(await request.form())
+    form = await request.form()
+    fields = clean_fields(form)
     sets = ", ".join(f"{k}=?" for k in fields)
     conn.execute(f"UPDATE rolls SET {sets}, updated_at=? WHERE id=?", [*fields.values(), now(), r["id"]])
     db.log(conn, r["id"], "edit")
+    scanned, was = bool(form.get("scanned")), form.get("scanned_was") == "1"
+    if "scanned_was" in form and scanned != was:
+        db.set_stage(conn, r["id"], "scanned", "done" if scanned else False)
     return RedirectResponse(f"/rolls/{r['id']}?saved=1", 303)
 
 

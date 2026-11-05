@@ -41,7 +41,7 @@
 
   <section class="card">
     <h2>Details</h2>
-    <form method="post" action="/rolls/{{ r.id }}" class="rollform">
+    <form method="post" action="/rolls/{{ r.id }}" class="rollform" data-for="{{ r.id }}">
       {% include "_fields.html" %}
       <div class="actions"><button class="btn primary">Save</button></div>
     </form>

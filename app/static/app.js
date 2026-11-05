@@ -38,6 +38,10 @@
       });
       box.closest("tr")?.classList.toggle("done", data.done);
     });
+    document.querySelectorAll(`form[data-for="${data.id}"]`).forEach((form) => {
+      form.querySelectorAll("[data-mirror]").forEach((cb) => (cb.checked = data.stages[cb.dataset.mirror] === "done"));
+      form.querySelectorAll("[data-mirror-was]").forEach((h) => (h.value = data.stages[h.dataset.mirrorWas] === "done" ? 1 : 0));
+    });
   };
 
   const post = async (url, body) => {
