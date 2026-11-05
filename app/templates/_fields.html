@@ -13,14 +13,14 @@
     <label>From</label>
     <div class="pair">
       {{ season_select('start_season', d.start_season) }}
-      <input name="start_year" value="{{ d.start_year or '' }}" inputmode="numeric" pattern="[0-9]*" placeholder="Year" aria-label="Start year">
+      <input name="start_year" value="{{ d.start_year or '' }}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Year" aria-label="Start year">
     </div>
   </div>
   <div class="f date">
     <label>To <span class="muted">(blank if same)</span></label>
     <div class="pair">
       {{ season_select('end_season', d.end_season) }}
-      <input name="end_year" value="{{ d.end_year or '' }}" inputmode="numeric" pattern="[0-9]*" placeholder="Year" aria-label="End year">
+      <input name="end_year" value="{{ d.end_year or '' }}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="Year" aria-label="End year">
     </div>
   </div>
   <div class="f wide tbc-field">
