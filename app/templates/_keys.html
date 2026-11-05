@@ -1,0 +1,1 @@
+{% macro row(keys, what) %}<dt>{% for k in keys %}{% if not loop.first %}<span class="muted">·</span>{% endif %}<kbd {{ 'class=mod' if k == 'Ctrl' }}>{{ k }}</kbd>{% endfor %}</dt><dd>{{ what }}</dd>{% endmacro %}

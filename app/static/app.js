@@ -112,6 +112,56 @@
     refresh();
   }
 
+  const keys = document.getElementById("keys");
+  const showKeys = () => keys && !keys.open && keys.showModal();
+  document.getElementById("kbd")?.addEventListener("click", showKeys);
+  keys?.addEventListener("click", (ev) => ev.target === keys && keys.close());
+  if (/Mac|iPhone|iPad/.test(navigator.platform)) document.querySelectorAll("kbd.mod").forEach((k) => (k.textContent = "⌘"));
+
+  const page = document.body.dataset.page;
+  if (page === "index" && location.hash === "#search") document.querySelector(".search")?.focus();
+  const typing = (el) => el?.isContentEditable || (/^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName) && !/^(checkbox|radio|button|submit|file)$/.test(el.type));
+  const go = (url) => (location.href = url);
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.isComposing || ev.defaultPrevented) return;
+    const t = ev.target;
+    if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) {
+      const form = t.closest?.("form.rollform") || document.querySelector("form.rollform");
+      if (!form) return;
+      ev.preventDefault();
+      const open = form.querySelector('button[value="open"]');
+      open ? form.requestSubmit(open) : form.requestSubmit();
+      return;
+    }
+    if (typing(t)) {
+      if (ev.key === "Escape") t.blur();
+      return;
+    }
+    if (ev.metaKey || ev.ctrlKey || ev.altKey || keys?.open) return;
+    const k = ev.key;
+    const act = {
+      "?": showKeys,
+      n: () => go("/add"),
+      i: () => go("/rolls"),
+      h: () => go("/"),
+      l: () => lamp?.click(),
+      "/": () => (page === "index" ? document.querySelector(".search")?.select() : go("/rolls#search")),
+    }[k] || (page === "roll" && {
+      ArrowLeft: () => document.querySelector(".nav-arrow:not(.off)[aria-label^=Prev]")?.click(),
+      ArrowRight: () => document.querySelector(".nav-arrow:not(.off)[aria-label^=Next]")?.click(),
+      e: () => {
+        const c = document.getElementById("contents");
+        c?.focus();
+        c?.setSelectionRange(c.value.length, c.value.length);
+      },
+      ...Object.fromEntries([1, 2, 3, 4].map((n) => [n, () => document.querySelectorAll(".stagebar [data-stage]")[n - 1]?.click()])),
+    }[k]);
+    if (!act) return;
+    ev.preventDefault();
+    act();
+  });
+
   document.getElementById("invert")?.addEventListener("click", () => {
     document.getElementById("sleeveimg")?.classList.toggle("inverted");
   });

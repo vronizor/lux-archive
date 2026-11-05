@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ r.id }} · {{ app_name }}{% endblock %}
+{% block page %}roll{% endblock %}
+{% block keys %}
+{{ row(['←', '→'], 'Previous / next roll') }}
+{{ row(['1', '2', '3', '4'], 'Tick a stage (2 cycles done → skipped → to do)') }}
+{{ row(['e'], 'Edit details') }}
+{{ row(['Ctrl', 'Enter'], 'Save details') }}
+{% endblock %}
 {% block main %}
 {% if saved %}<p class="toast" role="status">Saved.</p>{% endif %}
 <section class="rollhead">

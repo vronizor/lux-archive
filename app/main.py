@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import io
 import os
 from pathlib import Path
@@ -37,6 +38,7 @@ templates.env.globals.update(
     stage_state=db.stage_state,
     is_done=db.is_done,
     stage_label=stats.STAGE_LABEL,
+    asset_v=hashlib.sha256(b"".join(p.read_bytes() for p in sorted((HERE / "static").iterdir()))).hexdigest()[:10],
 )
 
 EXPORT_COLS = [

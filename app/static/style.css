@@ -84,6 +84,24 @@ nav a.add { color: var(--accent-ink); }
   display: flex; align-items: center; gap: .45rem; border: 1px solid var(--line); background: var(--surface);
   color: var(--muted); border-radius: 999px; padding: .35rem .7rem .35rem .5rem; font: inherit; font-size: .8rem; cursor: pointer;
 }
+.kbd-hint {
+  border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 8px;
+  font-size: 1.05rem; line-height: 1; padding: .3rem .45rem; cursor: pointer;
+}
+.kbd-hint:hover { color: var(--ink); border-color: var(--line-strong); }
+@media (hover: none) and (pointer: coarse) { .kbd-hint { display: none; } }
+dialog.keys { width: min(420px, calc(100vw - 32px)); color: var(--ink); margin: auto; padding: 1rem 1.2rem 1.1rem; }
+dialog.keys::backdrop { background: rgba(20, 14, 8, .45); }
+.keys-head { display: flex; justify-content: space-between; align-items: center; }
+.keys-head h2 { margin: 0; }
+.keys h3 { font-size: .78rem; font-weight: 500; color: var(--muted); margin: 1rem 0 .4rem; }
+.keys dl { display: grid; grid-template-columns: 8.2rem 1fr; gap: .4rem 1rem; margin: 0; align-items: baseline; }
+.keys dt { display: flex; gap: .25rem; align-items: baseline; white-space: nowrap; }
+.keys dd { margin: 0; font-size: .92rem; }
+kbd {
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .8rem; min-width: 1.6em; text-align: center;
+  padding: .1rem .35rem; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 5px; background: var(--bg);
+}
 .bulb { width: 11px; height: 11px; border-radius: 50%; background: var(--bulb); box-shadow: var(--bulb-glow); }
 
 .sprocket-rule {

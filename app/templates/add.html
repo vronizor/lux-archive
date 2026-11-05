@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block title %}File a roll · {{ app_name }}{% endblock %}
+{% block page %}add{% endblock %}
+{% block keys %}
+{{ row(['Enter'], 'Save & next') }}
+{{ row(['Ctrl', 'Enter'], 'Save & open') }}
+{% endblock %}
 {% block main %}
 {% if saved %}<p class="toast" role="status">{{ saved }} filed. Next one.</p>{% endif %}
 {% if error %}<p class="toast err" role="alert">{{ error }}</p>{% endif %}

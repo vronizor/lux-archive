@@ -10,12 +10,13 @@ try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css?v=1">
+<link rel="stylesheet" href="/static/style.css?v={{ asset_v }}">
 <link rel="icon" href="/static/logo.svg" type="image/svg+xml">
 <meta name="theme-color" content="#f3eee4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0e0c0b" media="(prefers-color-scheme: dark)">
 </head>
-<body>
+{% from "_keys.html" import row %}
+<body data-page="{% block page %}{% endblock %}">
 <header class="top">
   <a class="brand" href="/">
     <svg class="mark" viewBox="0 0 32 24" aria-hidden="true">
@@ -29,6 +30,7 @@ try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement
   <nav>
     <a href="/rolls" class="{{ 'on' if request.url.path.startswith('/rolls') }}">Index</a>
     <a href="/add" class="add {{ 'on' if request.url.path == '/add' }}">+ Roll</a>
+    <button type="button" class="kbd-hint" id="kbd" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">⌨</button>
     <button type="button" class="lamp" id="lamp" aria-label="Switch between light table and darkroom">
       <span class="bulb" aria-hidden="true"></span><span class="lamp-label"></span>
     </button>
@@ -38,6 +40,22 @@ try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement
 <main>
 {% block main %}{% endblock %}
 </main>
-<script src="/static/app.js?v=1" defer></script>
+<dialog class="card keys" id="keys" aria-labelledby="keys-title">
+  <div class="keys-head"><h2 id="keys-title">Keyboard shortcuts</h2><form method="dialog"><button class="btn small">Close</button></form></div>
+  {% set page_rows %}{% block keys %}{% endblock %}{% endset %}
+  {% if page_rows|trim %}<h3>This page</h3><dl>{{ page_rows }}</dl>{% endif %}
+  <h3>Anywhere</h3>
+  <dl>
+    {{ row(['n'], 'File a new roll') }}
+    {{ row(['i'], 'Index') }}
+    {{ row(['h'], 'Home') }}
+    {{ row(['/'], 'Search the index') }}
+    {{ row(['l'], 'Light table / darkroom') }}
+    {{ row(['?'], 'This card') }}
+    {{ row(['Esc'], 'Leave a field, close this card') }}
+  </dl>
+  <p class="muted small">Single keys are ignored while you're typing in a field.</p>
+</dialog>
+<script src="/static/app.js?v={{ asset_v }}" defer></script>
 </body>
 </html>
