@@ -4,6 +4,7 @@
 {% block keys %}
 {{ row(['Enter'], 'Save & next') }}
 {{ row(['Ctrl', 'Enter'], 'Save & open') }}
+{{ row(['↑', '↓'], 'In a year field: one year later / earlier') }}
 {% endblock %}
 {% block main %}
 {% if saved %}<p class="toast" role="status">{{ saved }} filed. Next one.</p>{% endif %}

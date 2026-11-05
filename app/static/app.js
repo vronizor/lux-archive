@@ -134,6 +134,18 @@
       open ? form.requestSubmit(open) : form.requestSubmit();
       return;
     }
+    if (/^(start|end)_year$/.test(t.name) && (ev.key === "ArrowUp" || ev.key === "ArrowDown") && !ev.metaKey && !ev.ctrlKey && !ev.altKey) {
+      ev.preventDefault();
+      const other = t.form?.elements[t.name === "start_year" ? "end_year" : "start_year"];
+      const cur = parseInt(t.value, 10);
+      const thisYear = new Date().getFullYear();
+      const next = Number.isNaN(cur)
+        ? parseInt(other?.value, 10) || thisYear
+        : cur + (ev.key === "ArrowUp" ? 1 : -1);
+      t.value = Math.min(thisYear, Math.max(1900, next));
+      t.select();
+      return;
+    }
     if (typing(t)) {
       if (ev.key === "Escape") t.blur();
       return;
