@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Re-file · {{ app_name }}{% endblock %}
+{% block page %}refile{% endblock %}
+{% block keys %}
+{{ row(['u'], 'Undo the last placement') }}
+{{ row(['/'], 'Jump to the roll number box') }}
+{% endblock %}
+{% block main %}
+<h1>Re-file</h1>
+<p class="muted small">Pick a binder, then tap rolls in the order they go in. Each tap puts the roll in the next sleeve and marks it filed.</p>
+
+<form class="card refilebar" method="get" action="/refile" id="refileform">
+  <div class="f">
+    <label for="rbinder">Into binder</label>
+    <input id="rbinder" name="binder" value="{{ binder }}" list="binders" autocomplete="off" placeholder="A1" required>
+  </div>
+  <div class="f short">
+    <label for="rsleeve">Next sleeve</label>
+    <input id="rsleeve" value="{{ next_sleeve if binder else 1 }}" inputmode="numeric" pattern="[0-9]*" {{ 'disabled' if not binder }}>
+  </div>
+  <input type="hidden" name="show" value="{{ show }}">
+  <button class="btn small">Set</button>
+  {% if binder and held %}<p class="muted small wide">{{ binder }} already holds {{ held }} roll{{ 's' if held != 1 }}, up to sleeve {{ next_sleeve - 1 }}. Set the next sleeve to 1 to refill it from the front.</p>{% endif %}
+</form>
+<datalist id="binders">{% for s in binders %}<option value="{{ s }}">{% endfor %}</datalist>
+
+{% if binder %}
+<div class="placebar" id="placebar" data-binder="{{ binder }}">
+  <form id="placeform" class="placeform">
+    <input id="placeid" inputmode="numeric" autocomplete="off" placeholder="Roll number, Enter to place" aria-label="Roll number">
+    <button class="btn small primary">Place</button>
+  </form>
+  <div class="placelog">
+    <span id="lastplaced" class="muted small">Nothing placed yet.</span>
+    <button type="button" class="btn small ghost" id="undo" hidden>Undo</button>
+  </div>
+</div>
+
+<nav class="pills" aria-label="Show">
+  {% for key, label in shows.items() %}
+  <a class="pill {{ 'on' if show == key }}" href="/refile?binder={{ binder|urlencode }}&show={{ key }}">{{ label }}</a>
+  {% endfor %}
+</nav>
+
+<ul class="refilelist">
+  {% for r in rolls %}
+  <li><button type="button" class="placeable" data-id="{{ r.id }}">
+    <span class="rid">{{ r.id }}</span>
+    <span class="what">{{ r.contents or '—' }} <span class="muted small">{{ when(r, short=True) }}</span></span>
+    <span class="loc" data-was="{{ r.binder }}{% if r.sleeve %}/{{ r.sleeve }}{% endif %}">{% if r.filed_at %}{{ r.binder or '—' }}{% if r.sleeve %}/{{ r.sleeve }}{% endif %}{% else %}not filed{% endif %}</span>
+  </button></li>
+  {% else %}
+  <li class="muted">Nothing to place here.</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if clashes %}
+<section class="card mt">
+  <h2>Shared sleeves</h2>
+  <p class="muted small">These rolls sit in the same binder and sleeve. Expected mid-transfer; should be empty once you're done.</p>
+  <ul class="clashes">
+    {% for c in clashes %}<li><span class="mono">{{ c.binder }}/{{ c.sleeve }}</span> {{ c.ids }}</li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

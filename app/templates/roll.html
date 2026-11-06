@@ -37,7 +37,10 @@
     <figure class="sleeve">
       <img id="sleeveimg" src="/photos/{{ r.photo }}?v={{ r.updated_at|urlencode }}" alt="Sleeve of {{ r.id }}">
     </figure>
-    <button type="button" class="btn small" id="invert">Invert (see as positive)</button>
+    <div class="photoacts">
+      <button type="button" class="btn small" id="invert">Invert (see as positive)</button>
+      <a class="btn small ghost" href="/photos/{{ r.photo }}?v={{ r.updated_at|urlencode }}" target="_blank" rel="noopener">Full size</a>
+    </div>
     {% else %}
     <p class="muted">No photo yet. Lay the sleeve on a light pad and shoot it straight on.</p>
     {% endif %}

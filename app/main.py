@@ -17,6 +17,7 @@ from .db import STAGES, get_db, now
 
 APP_NAME = os.environ.get("APP_NAME", "Lux Archive")
 TRUTHY = ("1", "on", "true", "yes", "y")
+PHOTO_MAX = int(os.environ.get("LUX_PHOTO_MAX", "3200"))
 
 
 def when(roll, short=False):
@@ -298,9 +299,9 @@ def delete_roll(roll_id: str, conn=Depends(get_db)):
 
 def save_photo(conn, roll_id, data):
     img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
-    img.thumbnail((1600, 1600))
+    img.thumbnail((PHOTO_MAX, PHOTO_MAX), Image.LANCZOS)
     name = f"{roll_id}.jpg"
-    img.save(db.PHOTO_DIR / name, "JPEG", quality=82, optimize=True)
+    img.save(db.PHOTO_DIR / name, "JPEG", quality=88, optimize=True, progressive=True)
     conn.execute("UPDATE rolls SET photo=?, updated_at=? WHERE id=?", (name, now(), roll_id))
     row = conn.execute("SELECT photographed_at, photographed_skipped FROM rolls WHERE id=?", (roll_id,)).fetchone()
     if not row["photographed_at"] or row["photographed_skipped"]:
@@ -355,6 +356,54 @@ async def api_bulk(request: Request, conn=Depends(get_db)):
         db.set_stage(conn, r["id"], stage, value)
         out.append(stage_json(fetch_roll(conn, r["id"])))
     return JSONResponse({"updated": out})
+
+
+REFILE_SHOWS = {"all": "All", "unfiled": "Not filed", "elsewhere": "Not in this binder"}
+
+
+def slot_clashes(conn):
+    return conn.execute(
+        "SELECT binder, sleeve, GROUP_CONCAT(id, ', ') AS ids FROM rolls "
+        "WHERE binder != '' AND sleeve IS NOT NULL GROUP BY binder, sleeve HAVING COUNT(*) > 1 ORDER BY binder, sleeve"
+    ).fetchall()
+
+
+@app.get("/refile", response_class=HTMLResponse)
+def refile_page(request: Request, binder: str = "", show: str = "all", conn=Depends(get_db)):
+    binder = binder.strip()
+    show = show if show in REFILE_SHOWS else "all"
+    held = conn.execute(
+        "SELECT COUNT(*) AS n, COALESCE(MAX(sleeve), 0) AS top FROM rolls WHERE binder=? AND ?!=''", (binder, binder)
+    ).fetchone()
+    where = {"all": "1=1", "unfiled": "filed_at IS NULL", "elsewhere": "binder != ?"}[show]
+    rolls = conn.execute(f"SELECT * FROM rolls WHERE {where} ORDER BY num", (binder,) if show == "elsewhere" else ()).fetchall()
+    return render(
+        request, "refile.html", binder=binder, show=show, shows=REFILE_SHOWS, rolls=rolls,
+        held=held["n"], next_sleeve=held["top"] + 1, binders=distinct(conn, "binder"), clashes=slot_clashes(conn),
+    )
+
+
+@app.post("/api/rolls/{roll_id}/place")
+async def api_place(roll_id: str, request: Request, conn=Depends(get_db)):
+    body = await request.json()
+    r = fetch_roll(conn, roll_id)
+    binder = str(body.get("binder") or "").strip()
+    sleeve = body.get("sleeve")
+    sleeve = int(sleeve) if str(sleeve or "").isdigit() else None
+    undo = bool(body.get("undo"))
+    if not binder and not undo:
+        raise HTTPException(400, "Pick a binder first")
+    before = {"binder": r["binder"], "sleeve": r["sleeve"], "filed": bool(r["filed_at"])}
+    conn.execute("UPDATE rolls SET binder=?, sleeve=?, updated_at=? WHERE id=?", (binder, sleeve, now(), r["id"]))
+    db.log(conn, r["id"], "edit")
+    if undo and body.get("unfile"):
+        db.set_stage(conn, r["id"], "filed", False)
+    elif not undo and not r["filed_at"]:
+        db.set_stage(conn, r["id"], "filed", "done")
+    clash = [x["id"] for x in conn.execute(
+        "SELECT id FROM rolls WHERE binder=? AND sleeve=? AND id!=? AND ?!=''", (binder, sleeve, r["id"], binder)
+    )]
+    return JSONResponse({"id": r["id"], "binder": binder, "sleeve": sleeve, "before": before, "clash": clash})
 
 
 @app.get("/export.csv")

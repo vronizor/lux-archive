@@ -26,7 +26,7 @@ def export(target):
     for src in db.PHOTO_DIR.glob("*.jpg"):
         keep.add(src.name)
         dst = photos / src.name
-        if not dst.exists() or dst.stat().st_size != src.stat().st_size:
+        if not dst.exists() or (dst.stat().st_size, int(dst.stat().st_mtime)) != (src.stat().st_size, int(src.stat().st_mtime)):
             shutil.copy2(src, dst)
     for old in photos.glob("*.jpg"):
         if old.name not in keep:

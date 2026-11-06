@@ -4,6 +4,8 @@ The master index of Vincent's film rolls: one record per roll, four stages, and 
 
 - **Roll IDs** (`V001`, `V002`…) are accession numbers: the next free number, assigned once, never changed or reused. They record when a roll entered the archive, not when it was shot. Chronology lives in the date fields — use *By date* in the index.
 - **Stages:** Filed → Photographed (sleeve on a light pad; can be *skipped* for rolls already scanned) → Scanned → Linked (`V###_FF` files in digiKam). Stages can be ticked in any order. A roll is done when all four are ticked or skipped.
+- **Re-file** (Index → *Re-file into a binder*): pick a binder, then tap rolls (or type their numbers) in the order they go in. Each gets the next sleeve and is marked filed; `u` undoes. Rolls sharing a binder/sleeve are listed so a transfer can be checked when it's done.
+- **Sleeve photos** are stored at up to 3200 px on the long edge (`LUX_PHOTO_MAX`), enough to read frames from a 35mm sleeve.
 - **Seasons:** Winter YYYY = Dec YYYY – Feb YYYY+1.
 - **Year TBC:** tick it when you're unsure of the year (an unsure season alone doesn't count). The roll still sorts by its best-guess date; *Year TBC* in the index lists them for a later pass.
 
@@ -55,6 +57,7 @@ docker compose exec -T lux python -m app.backup restore /backup
 | --- | --- | --- |
 | `APP_NAME` | `Lux Archive` | Display name |
 | `LUX_PORT` | `8410` | Host port (localhost only) |
+| `LUX_PHOTO_MAX` | `3200` | Long edge of stored sleeve photos, in px |
 | `BACKUP_DIR` | `../lux-archive-data` | Backup repo checkout, mounted at `/backup` |
 
 ## Stack

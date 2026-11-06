@@ -6,6 +6,7 @@ services:
     environment:
       TZ: Europe/Paris
       APP_NAME: ${APP_NAME:-Lux Archive}
+      LUX_PHOTO_MAX: ${LUX_PHOTO_MAX:-3200}
     ports:
       - "127.0.0.1:${LUX_PORT:-8410}:8000"
     volumes:

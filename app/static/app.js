@@ -112,6 +112,70 @@
     refresh();
   }
 
+  const placebar = document.getElementById("placebar");
+  let undoLast = null;
+  if (placebar) {
+    const binder = placebar.dataset.binder;
+    const sleeveIn = document.getElementById("rsleeve");
+    const idIn = document.getElementById("placeid");
+    const lastEl = document.getElementById("lastplaced");
+    const undoBtn = document.getElementById("undo");
+    const stack = [];
+    const rowFor = (id) => document.querySelector(`.placeable[data-id="${id}"]`);
+    const say = (text, warn) => { lastEl.textContent = text; lastEl.classList.toggle("warn", !!warn); };
+    const place = async (raw) => {
+      const num = parseInt(String(raw).replace(/^v/i, ""), 10);
+      if (!num) return;
+      const id = "V" + String(num).padStart(3, "0");
+      const sleeve = parseInt(sleeveIn.value, 10) || 1;
+      try {
+        const res = await post(`/api/rolls/${id}/place`, { binder, sleeve });
+        stack.push(res);
+        sleeveIn.value = sleeve + 1;
+        const row = rowFor(id);
+        if (row) {
+          row.classList.add("placed");
+          row.querySelector(".loc").textContent = `→ ${binder}/${sleeve}`;
+        }
+        say(`${id} → ${binder}/${sleeve}` + (res.clash.length ? ` · shares the sleeve with ${res.clash.join(", ")}` : ""), res.clash.length);
+        undoBtn.hidden = false;
+      } catch (e) {
+        let why = e.message;
+        try { why = JSON.parse(why).detail || why; } catch (_) {}
+        say(`Could not place ${id}: ${why}`, true);
+      }
+    };
+    undoLast = async () => {
+      const last = stack.pop();
+      if (!last) return;
+      const b = last.before;
+      try {
+        await post(`/api/rolls/${last.id}/place`, { binder: b.binder, sleeve: b.sleeve, undo: true, unfile: !b.filed });
+        sleeveIn.value = last.sleeve;
+        const row = rowFor(last.id);
+        if (row) {
+          row.classList.remove("placed");
+          row.querySelector(".loc").textContent = b.filed ? (b.binder || "—") + (b.sleeve ? `/${b.sleeve}` : "") : "not filed";
+        }
+        say(`Undid ${last.id}; back to ${b.filed ? (b.binder || "—") + (b.sleeve ? "/" + b.sleeve : "") : "not filed"}.`);
+        undoBtn.hidden = stack.length === 0;
+      } catch (e) {
+        stack.push(last);
+        say("Could not undo: " + e.message, true);
+      }
+    };
+    undoBtn.addEventListener("click", undoLast);
+    document.querySelectorAll(".placeable").forEach((btn) => btn.addEventListener("click", () => {
+      if (!btn.classList.contains("placed")) place(btn.dataset.id);
+    }));
+    document.getElementById("placeform").addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      place(idIn.value);
+      idIn.value = "";
+    });
+  }
+  document.getElementById("rbinder")?.addEventListener("change", (ev) => ev.target.form.requestSubmit());
+
   const keys = document.getElementById("keys");
   const showKeys = () => keys && !keys.open && keys.showModal();
   document.getElementById("kbd")?.addEventListener("click", showKeys);
@@ -168,7 +232,8 @@
       i: () => go("/rolls"),
       h: () => go("/"),
       l: () => lamp?.click(),
-      "/": () => (page === "index" ? document.querySelector(".search")?.select() : go("/rolls#search")),
+      "/": () => (page === "index" ? document.querySelector(".search")?.select() : page === "refile" && document.getElementById("placeid") ? document.getElementById("placeid").focus() : go("/rolls#search")),
+      u: page === "refile" && undoLast ? undoLast : null,
       f: page === "index" && filters ? () => { filters.open = true; filters.querySelector(".pop input[type=checkbox]")?.focus(); } : null,
     }[k] || (page === "roll" && {
       ArrowLeft: () => document.querySelector(".nav-arrow:not(.off)[aria-label^=Prev]")?.click(),
