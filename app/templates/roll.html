@@ -63,7 +63,7 @@
         <label for="picks">Worth scanning <span class="muted">(frame numbers off the film edge)</span></label>
         <input id="picks" name="picks" value="{{ r.picks or '' }}" placeholder="4, 9, 17–19, 22A" autocomplete="off" spellcheck="false">
         <div class="quick">
-          <button type="button" class="btn small ghost" data-fill="picks" data-value="0">Nothing (0)</button>
+          <button type="button" class="btn small ghost" data-fill="picks" data-value="none">Nothing (none)</button>
           <button type="button" class="btn small ghost" data-fill="picks" data-value="all">Whole roll (all)</button>
         </div>
       </div>
@@ -77,7 +77,7 @@
       </div>
       <div class="actions"><button class="btn primary">Save scans</button></div>
     </form>
-    <p class="muted small">Leave “worth scanning” blank until you've looked at the contact sheet. Frames you scan get added to the picks. Name scan files <code>{{ r.id }}_14.jpg</code>, <code>{{ r.id }}_14A.jpg</code>.</p>
+    <p class="muted small">Leave “worth scanning” blank until you've looked at the contact sheet. Frames you scan get added to the picks. Name scan files with the frame number exactly as printed, no padding: <code>{{ r.id }}_0.jpg</code>, <code>{{ r.id }}_00.jpg</code>, <code>{{ r.id }}_4.jpg</code>, <code>{{ r.id }}_14A.jpg</code>.</p>
   </section>
 </div>
 

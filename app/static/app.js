@@ -279,7 +279,7 @@
   if (picksIn && scansIn && chipBox) {
     const expand = (text) => {
       const t = text.trim().toLowerCase();
-      if (!t || ["0", "none", "-", "all", "*"].includes(t)) return [];
+      if (!t || ["none", "nothing", "-", "all", "*"].includes(t)) return [];
       const out = [];
       t.replace(/\s*[-–—]\s*/g, "-").split(/[,;\s]+/).forEach((p) => {
         const r = p.match(/^(\d{1,2})-(\d{1,2})$/);

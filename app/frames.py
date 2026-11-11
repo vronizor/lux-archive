@@ -1,9 +1,9 @@
 import re
 
-NONE = "0"
+NONE = "none"
 ALL = "all"
 
-_NONE_WORDS = {"0", "none", "-", "—", "rien", "res", "nada"}
+_NONE_WORDS = {"none", "nothing", "-", "—", "rien", "res", "nada"}
 _ALL_WORDS = {"all", "*", "tout", "tot", "todo", "todos", "whole"}
 _TOKEN = re.compile(r"^(\d{1,2})([aA]?)$")
 _RANGE = re.compile(r"^(\d{1,2})\s*[-–—]\s*(\d{1,2})$")

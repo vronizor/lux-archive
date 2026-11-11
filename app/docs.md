@@ -9,7 +9,7 @@ Habits, conventions and rough processes. Items marked *proposed* are defaults to
 1. **File.** The roll gets the next free number, goes into the next sleeve of the current binder, and gets a season and a few words of contents.
 2. **Contact sheet.** Photograph the sleeve on the light table and upload it on the roll's page. Every roll gets one, including rolls a lab already scanned. It's how you check the lab didn't skip frames.
 3. **Link.** Download `V012_contact.jpg` from the roll page, put it in the roll's digiKam folder, tick *Linked*. From then on the roll exists in digiKam even if nothing else is ever scanned.
-4. **Review.** Look at the contact sheet and write down the frames worth scanning, or `0` for none, or `all`.
+4. **Review.** Look at the contact sheet and write down the frames worth scanning, or `none`, or `all`.
 5. **Scan.** Whenever, in any order, a few frames at a time. Each scan goes straight into the roll's digiKam folder; tap the frame on the roll page.
 
 A roll counts as **done** after step 4. Scanning keeps its own count (frames left to scan), so a roll with nothing worth scanning still finishes.
@@ -23,17 +23,17 @@ A roll counts as **done** after step 4. Scanning keeps its own count (frames lef
 | Where | Binder + sleeve number. One roll per sleeve. |
 | Frame numbers | As printed on the film edge: `00`, `0`, `1` … `36`. Half frames get an `A`: `14A`. Never the scan order. |
 | Contact sheet file | `V012_contact.jpg` (positive). The negative is `V012_contact_neg.jpg` if you ever want it. |
-| Scan files | `V012_14.jpg`, `V012_14A.jpg`. A re-scan of the same frame: `V012_14_v2.jpg` *(proposed)*. |
+| Scan files | Frame number exactly as printed, never padded: `V012_00.jpg`, `V012_0.jpg`, `V012_4.jpg`, `V012_14A.jpg`. Padding would turn frame 0 into `00` and collide with the real frame 00. digiKam's natural sort (Settings → Miscellaneous → Behavior) puts `_4` before `_14`. A re-scan of the same frame: `V012_14_v2.jpg` *(proposed)*. |
 | digiKam folders | One folder per roll, named after the roll ID: `V012/` *(proposed)*. |
 | Lab scans | Put the lab's folder name in *Lab scan folder*. When linking, rename the files to `V012_FF` by matching them against the contact sheet, then set scans to `all`. |
 
 ### Writing picks
 
 - `4, 9, 17-19, 22A`: a list; ranges and spaces are fine.
-- `0` (or `none`): nothing worth scanning.
+- `none`: nothing worth scanning.
 - `all`: the whole roll.
 - Blank: not reviewed yet.
-- Inside a list, `0` and `00` are real frames: `0, 3` means frames 0 and 3.
+- `0` and `00` are real frames, on their own or in a list: `0` means frame 0, not “nothing”.
 - Scanning a frame that isn't in the picks adds it to the picks.
 
 ## Shooting a contact sheet

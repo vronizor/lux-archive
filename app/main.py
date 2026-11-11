@@ -59,7 +59,7 @@ FILTERS = {
     "need-photo": ("Contact sheet", "photographed_at IS NULL"),
     "need-link": ("To link", "photographed_at IS NOT NULL AND linked_at IS NULL"),
     "need-review": ("To review", "photographed_at IS NOT NULL AND picked_at IS NULL"),
-    "need-scan": ("To scan", "picks NOT IN ('', '0') AND scanned_at IS NULL"),
+    "need-scan": ("To scan", "picks NOT IN ('', 'none') AND scanned_at IS NULL"),
     "done": ("Done", DONE_SQL),
     "tbc": ("Year TBC", "date_tbc=1"),
 }
