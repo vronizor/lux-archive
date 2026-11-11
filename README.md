@@ -3,9 +3,10 @@
 The master index of Vincent's film rolls: one record per roll, four stages, and a progress page that makes a 20-minute session feel worth it. Film rolls archive past light; this keeps track of them.
 
 - **Roll IDs** (`V001`, `V002`…) are accession numbers: the next free number, assigned once, never changed or reused. They record when a roll entered the archive, not when it was shot. Chronology lives in the date fields — use *By date* in the index.
-- **Stages:** Filed → Photographed (sleeve on a light pad; can be *skipped* for rolls already scanned) → Scanned → Linked (`V###_FF` files in digiKam). Stages can be ticked in any order. A roll is done when all four are ticked or skipped.
+- **Stages:** Filed → Contact sheet (sleeve photographed on the light table; every roll gets one) → Linked (`V###_contact.jpg` in digiKam) → Scans. Scans hold the frames worth scanning (`4, 9, 17-19`, `0` for none, `all`) and the frames scanned so far. A roll is done once the first three are ticked and its picks are decided; scanning keeps its own count and can go on afterwards. Frame numbers are the ones printed on the film edge.
+- **Docs** tab: habits, conventions and processes, from `app/docs.md`.
 - **Re-file** (Index → *Re-file into a binder*): pick a binder, then tap rolls (or type their numbers) in the order they go in. Each gets the next sleeve and is marked filed; `u` undoes. Rolls sharing a binder/sleeve are listed so a transfer can be checked when it's done.
-- **Sleeve photos** are stored at up to 3200 px on the long edge (`LUX_PHOTO_MAX`), enough to read frames from a 35mm sleeve.
+- **Contact sheets** are kept full size in `data/photos/originals/`, plus a preview (`LUX_PHOTO_MAX`, 3200 px) and a positive made from it (invert, remove the orange mask, per-channel levels; slides are left as is). The roll page offers the full-size positive as `V###_contact.jpg` for digiKam.
 - **Seasons:** Winter YYYY = Dec YYYY – Feb YYYY+1.
 - **Year TBC:** tick it when you're unsure of the year (an unsure season alone doesn't count). The roll still sorts by its best-guess date; *Year TBC* in the index lists them for a later pass.
 
@@ -39,7 +40,7 @@ crontab -e
 # 30 3 * * * $HOME/lux-archive/scripts/backup.sh >> $HOME/lux-backup.log 2>&1
 ```
 
-The script writes `rolls.csv`, `events.csv` and `photos/` into `../lux-archive-data`, then commits and pushes if anything changed. The Pi needs push access to that repo (a deploy key with write access works).
+The script writes `rolls.csv`, `events.csv` and the contact-sheet previews (`photos/`) into `../lux-archive-data`, then commits and pushes if anything changed. Full-size originals are not backed up to git (too big); copy `data/photos/originals/` somewhere else (NAS) yourself. Positives are regenerated on restore. The Pi needs push access to that repo (a deploy key with write access works).
 
 Restore into an empty database:
 
@@ -49,7 +50,7 @@ docker compose exec -T lux python -m app.backup restore /backup
 
 ## Import rolls numbered on paper
 
-*Index → Import CSV.* Columns: `id,start,end,contents,binder,sleeve,stock,camera,scanned`, plus an optional `process` column (`colour`/`C-41`, `B&W`/`N&B`, `slide`/`E-6`). Dates accept `Summer 2014`, `Su14`, `2014`, and French/Catalan/Spanish season names. A `?` anywhere in a date (`Su14?`) or a truthy optional `tbc` column flags the roll as *Year TBC*. Existing IDs are skipped, never overwritten.
+*Index → Import CSV.* Columns: `id,start,end,contents,binder,sleeve,stock,camera,scanned` (`scanned` = a whole-roll scan exists), plus an optional `process` column (`colour`/`C-41`, `B&W`/`N&B`, `slide`/`E-6`). Dates accept `Summer 2014`, `Su14`, `2014`, and French/Catalan/Spanish season names. A `?` anywhere in a date (`Su14?`) or a truthy optional `tbc` column flags the roll as *Year TBC*. Existing IDs are skipped, never overwritten.
 
 ## Config
 
@@ -57,7 +58,7 @@ docker compose exec -T lux python -m app.backup restore /backup
 | --- | --- | --- |
 | `APP_NAME` | `Lux Archive` | Display name |
 | `LUX_PORT` | `8410` | Host port (localhost only) |
-| `LUX_PHOTO_MAX` | `3200` | Long edge of stored sleeve photos, in px |
+| `LUX_PHOTO_MAX` | `3200` | Long edge of contact-sheet previews, in px (originals are kept full size) |
 | `BACKUP_DIR` | `../lux-archive-data` | Backup repo checkout, mounted at `/backup` |
 
 ## Stack

@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from . import db
-from .main import EXPORT_COLS, import_rows
+from .main import EXPORT_COLS, import_rows, write_positive
 
 
 def export(target):
@@ -24,6 +24,8 @@ def export(target):
             w.writerow(list(e))
     keep = set()
     for src in db.PHOTO_DIR.glob("*.jpg"):
+        if src.stem.endswith("_pos"):
+            continue
         keep.add(src.name)
         dst = photos / src.name
         if not dst.exists() or (dst.stat().st_size, int(dst.stat().st_mtime)) != (src.stat().st_size, int(src.stat().st_mtime)):
@@ -45,6 +47,9 @@ def restore(source):
         shutil.copy2(src, db.PHOTO_DIR / src.name)
     with open(source / "rolls.csv", newline="") as f:
         added, skipped, errors = import_rows(conn, csv.DictReader(f))
+    for r in conn.execute("SELECT id, process, photo FROM rolls WHERE photo IS NOT NULL AND photo != ''").fetchall():
+        if (db.PHOTO_DIR / r["photo"]).exists():
+            write_positive(r["id"], r["process"])
     conn.execute("DELETE FROM events")
     events = source / "events.csv"
     if events.exists():

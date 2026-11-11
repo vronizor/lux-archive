@@ -18,12 +18,21 @@
   dark.addEventListener?.("change", paintLamp);
   paintLamp();
 
-  const LABELS = { done: "done", todo: "to do", skip: "skipped" };
+  const LABELS = { done: "done", todo: "to do" };
   const nextState = (stage, state) => {
-    if (stage === "photographed") return { todo: "done", done: "skip", skip: "todo" }[state];
+    if (stage === "picked") return { todo: "skip", skip: "todo" }[state];
     return state === "done" ? "todo" : "done";
   };
   const asValue = (state) => (state === "todo" ? false : state);
+  const toScans = (id) => {
+    if (document.body.dataset.page === "roll") {
+      const picks = document.getElementById("picks");
+      document.getElementById("scans")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      picks?.focus({ preventScroll: true });
+    } else {
+      location.href = `/rolls/${id}#scans`;
+    }
+  };
 
   const paint = (data) => {
     document.querySelectorAll(`[data-roll="${data.id}"]`).forEach((box) => {
@@ -33,7 +42,8 @@
         btn.classList.add(st);
         btn.dataset.state = st;
         const label = btn.querySelector(".state");
-        if (label) label.textContent = LABELS[st];
+        if (label) label.textContent = btn.dataset.stage === "picked" ? data.scans : LABELS[st];
+        if (btn.dataset.stage === "picked") btn.title = `Scans: ${data.scans}`;
         btn.setAttribute("aria-label", `${btn.dataset.stage}: ${st}`);
       });
       box.closest("tr")?.classList.toggle("done", data.done);
@@ -58,6 +68,7 @@
     const id = btn.closest("[data-roll]").dataset.roll;
     const stage = btn.dataset.stage;
     const target = nextState(stage, btn.dataset.state);
+    if (stage === "picked" && (!target || btn.closest(".stagebar"))) return toScans(id);
     btn.classList.add("busy");
     try {
       paint(await post(`/api/rolls/${id}/stage`, { stage, value: asValue(target) }));
@@ -72,13 +83,14 @@
   if (boxes.length && bar) {
     let last = null;
     const stageSel = document.getElementById("bulkstage");
-    const skipBtn = document.getElementById("bulkskip");
+
     const selected = () => boxes.filter((b) => b.checked);
     const refresh = () => {
       const n = selected().length;
       bar.hidden = n === 0;
       document.getElementById("bulkcount").textContent = n;
-      skipBtn.hidden = stageSel.value !== "photographed";
+      const kind = stageSel.value === "picked" ? "picked" : "tick";
+      bar.querySelectorAll("[data-for]").forEach((b) => (b.hidden = b.dataset.for !== kind));
     };
     boxes.forEach((b, i) => b.addEventListener("click", (ev) => {
       if (ev.shiftKey && last !== null) {
@@ -101,7 +113,7 @@
     stageSel.addEventListener("change", refresh);
     bar.querySelectorAll("[data-bulk]").forEach((btn) => btn.addEventListener("click", async () => {
       const ids = selected().map((b) => b.value);
-      const value = { done: "done", skip: "skip", clear: false }[btn.dataset.bulk];
+      const value = { done: "done", skip: "skip", all: "all", scanned: "scanned", clear: false }[btn.dataset.bulk];
       try {
         const res = await post("/api/bulk", { ids, stage: stageSel.value, value });
         res.updated.forEach(paint);
@@ -231,6 +243,7 @@
       n: () => go("/add"),
       i: () => go("/rolls"),
       h: () => go("/"),
+      d: () => go("/docs"),
       l: () => lamp?.click(),
       "/": () => (page === "index" ? document.querySelector(".search")?.select() : page === "refile" && document.getElementById("placeid") ? document.getElementById("placeid").focus() : go("/rolls#search")),
       u: page === "refile" && undoLast ? undoLast : null,
@@ -244,13 +257,69 @@
         c?.setSelectionRange(c.value.length, c.value.length);
       },
       ...Object.fromEntries([1, 2, 3, 4].map((n) => [n, () => document.querySelectorAll(".stagebar [data-stage]")[n - 1]?.click()])),
+      v: () => document.getElementById("flip")?.click(),
     }[k]);
     if (!act) return;
     ev.preventDefault();
     act();
   });
 
-  document.getElementById("invert")?.addEventListener("click", () => {
-    document.getElementById("sleeveimg")?.classList.toggle("inverted");
+  const flip = document.getElementById("flip");
+  flip?.addEventListener("click", () => {
+    const img = document.getElementById("sleeveimg");
+    const neg = flip.getAttribute("aria-pressed") !== "true";
+    img.src = neg ? img.dataset.neg : img.dataset.pos;
+    flip.setAttribute("aria-pressed", neg);
+    flip.textContent = neg ? "Show positive" : "Show negative";
   });
+
+  const picksIn = document.getElementById("picks");
+  const scansIn = document.getElementById("scans-in");
+  const chipBox = document.getElementById("framechips");
+  if (picksIn && scansIn && chipBox) {
+    const expand = (text) => {
+      const t = text.trim().toLowerCase();
+      if (!t || ["0", "none", "-", "all", "*"].includes(t)) return [];
+      const out = [];
+      t.replace(/\s*[-–—]\s*/g, "-").split(/[,;\s]+/).forEach((p) => {
+        const r = p.match(/^(\d{1,2})-(\d{1,2})$/);
+        if (r) {
+          const [a, z] = [+r[1], +r[2]].sort((x, y) => x - y);
+          for (let n = a; n <= z && z - a <= 45; n++) out.push(String(n));
+        } else if (/^\d{1,2}a?$/.test(p)) {
+          out.push(p === "00" ? "00" : String(parseInt(p, 10)) + (p.endsWith("a") ? "A" : ""));
+        }
+      });
+      return [...new Set(out)];
+    };
+    const draw = () => {
+      const picks = expand(picksIn.value);
+      const all = scansIn.value.trim().toLowerCase() === "all";
+      const done = new Set(expand(scansIn.value));
+      chipBox.replaceChildren(...picks.map((f) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "fchip" + (all || done.has(f) ? " on" : "");
+        b.textContent = f;
+        b.setAttribute("aria-pressed", all || done.has(f));
+        b.addEventListener("click", () => {
+          const cur = scansIn.value.trim().toLowerCase() === "all" ? new Set(picks) : new Set(expand(scansIn.value));
+          cur.has(f) ? cur.delete(f) : cur.add(f);
+          scansIn.value = [...picks.filter((x) => cur.has(x)), ...[...cur].filter((x) => !picks.includes(x))].join(", ");
+          draw();
+        });
+        return b;
+      }));
+      chipBox.hidden = picks.length === 0;
+    };
+    picksIn.addEventListener("input", draw);
+    scansIn.addEventListener("input", draw);
+    document.querySelectorAll("[data-fill]").forEach((b) => b.addEventListener("click", () => {
+      const target = document.getElementById(b.dataset.fill);
+      target.value = b.dataset.from ? document.getElementById(b.dataset.from).value : b.dataset.value;
+      draw();
+    }));
+    draw();
+    if (location.hash === "#scans" && !picksIn.value) picksIn.focus();
+  }
 })();
