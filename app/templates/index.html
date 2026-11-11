@@ -57,7 +57,7 @@
 {% endif %}
 <nav class="pills" aria-label="Filter">
   {% for key, (label, _) in filters.items() %}
-  {% set n = {'all': counts.total, 'todo': counts.total - counts.done, 'need-photo': counts.need_photo, 'need-scan': counts.need_scan, 'need-link': counts.need_link, 'done': counts.done, 'tbc': counts.tbc}[key] %}
+  {% set n = {'all': counts.total, 'todo': counts.total - counts.done, 'need-photo': counts.need_photo, 'need-link': counts.need_link, 'need-review': counts.need_review, 'need-scan': counts.need_scan, 'done': counts.done, 'tbc': counts.tbc}[key] %}
   <a class="pill {{ 'on' if stage == key }}" href="{{ link(stage=key) }}">{{ label }} <span class="n">{{ n }}</span></a>
   {% endfor %}
 </nav>
@@ -65,11 +65,14 @@
 <div class="bulkbar" id="bulkbar" hidden>
   <span><strong id="bulkcount">0</strong> selected</span>
   <select id="bulkstage" aria-label="Stage">
-    {% for s in stages %}<option value="{{ s }}" {{ 'selected' if s == 'scanned' }}>{{ stage_label[s] }}</option>{% endfor %}
+    {% for s in stages %}<option value="{{ s }}" {{ 'selected' if s == 'photographed' }}>{{ stage_label[s] }}</option>{% endfor %}
   </select>
-  <button class="btn small primary" data-bulk="done">Mark</button>
-  <button class="btn small" data-bulk="skip" id="bulkskip">Skip</button>
-  <button class="btn small ghost" data-bulk="clear">Unmark</button>
+  <button class="btn small primary" data-bulk="done" data-for="tick">Mark</button>
+  <button class="btn small ghost" data-bulk="clear" data-for="tick">Unmark</button>
+  <button class="btn small" data-bulk="skip" data-for="picked">Nothing to scan</button>
+  <button class="btn small" data-bulk="all" data-for="picked">Whole roll</button>
+  <button class="btn small primary" data-bulk="scanned" data-for="picked">Whole roll, scanned</button>
+  <button class="btn small ghost" data-bulk="clear" data-for="picked" title="Only rolls with nothing scanned yet">To review</button>
   <button class="btn small ghost" id="bulknone">Clear selection</button>
 </div>
 
@@ -96,7 +99,7 @@
   {% endfor %}
   </tbody>
 </table>
-<p class="muted small">Tap a letter to tick a stage; tap P again to mark it skipped. Shift-click checkboxes to select a range.</p>
+<p class="muted small">Tap F, C or L to tick a stage. Tap S to mark “nothing to scan” (again to undo); once a roll has picks, S opens its scans. Shift-click checkboxes to select a range.</p>
 {% else %}
 <p class="card muted">Nothing here{% if q %} for “{{ q }}”{% endif %}{% if active %} with these filters{% endif %}.</p>
 {% endif %}

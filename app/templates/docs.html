@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Docs · {{ app_name }}{% endblock %}
+{% block page %}docs{% endblock %}
+{% block main %}
+<article class="card doc">
+{{ body }}
+</article>
+<p class="foot small">This page is <code>app/docs.md</code> in the repo. Edit it there.</p>
+{% endblock %}

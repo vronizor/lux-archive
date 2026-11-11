@@ -3,13 +3,16 @@
 {% block page %}roll{% endblock %}
 {% block keys %}
 {{ row(['←', '→'], 'Previous / next roll') }}
-{{ row(['1', '2', '3', '4'], 'Tick a stage (2 cycles done → skipped → to do)') }}
+{{ row(['1', '2', '3'], 'Tick or untick a stage') }}
+{{ row(['4'], 'Jump to scan picks') }}
+{{ row(['v'], 'Contact sheet: positive / negative') }}
 {{ row(['e'], 'Edit details') }}
 {{ row(['Ctrl', 'Enter'], 'Save details') }}
 {{ row(['↑', '↓'], 'In a year field: one year later / earlier') }}
 {% endblock %}
 {% block main %}
 {% if saved %}<p class="toast" role="status">Saved.</p>{% endif %}
+{% if error %}<p class="toast err" role="alert">{{ "Could not read that image. JPEG or PNG please." if error == 'photo' else error }}</p>{% endif %}
 <section class="rollhead">
   <a class="nav-arrow {{ 'off' if not nav.prev }}" href="{{ '/rolls/' ~ nav.prev if nav.prev else '#' }}" aria-label="Previous roll">‹</a>
   <div>
@@ -24,40 +27,67 @@
   <button type="button" class="stage {{ st }} s-{{ s }}" data-stage="{{ s }}" data-state="{{ st }}">
     <span class="num">{{ loop.index }}</span>
     <span class="name">{{ stage_label[s] }}</span>
-    <span class="state">{{ {'done': 'done', 'todo': 'to do', 'skip': 'skipped'}[st] }}</span>
+    <span class="state">{{ scan_summary(r.picks, r.scans) if s == 'picked' else {'done': 'done', 'todo': 'to do'}[st] }}</span>
   </button>
   {% endfor %}
 </section>
-<p class="muted small">Tap a stage to tick or untick it. Photographed cycles through done → skipped (already scanned) → to do.</p>
+<p class="muted small">Tap a stage to tick or untick it. Scans are set below, from the contact sheet.</p>
 
 <div class="grid2">
   <section class="card">
-    <h2>Sleeve photo</h2>
+    <h2>Contact sheet</h2>
     {% if r.photo %}
+    {% set v = r.updated_at|urlencode %}
     <figure class="sleeve">
-      <img id="sleeveimg" src="/photos/{{ r.photo }}?v={{ r.updated_at|urlencode }}" alt="Sleeve of {{ r.id }}">
+      <img id="sleeveimg" src="/photos/{{ r.id }}_pos.jpg?v={{ v }}" data-pos="/photos/{{ r.id }}_pos.jpg?v={{ v }}" data-neg="/photos/{{ r.photo }}?v={{ v }}" alt="Contact sheet of {{ r.id }}">
     </figure>
     <div class="photoacts">
-      <button type="button" class="btn small" id="invert">Invert (see as positive)</button>
-      <a class="btn small ghost" href="/photos/{{ r.photo }}?v={{ r.updated_at|urlencode }}" target="_blank" rel="noopener">Full size</a>
+      <button type="button" class="btn small" id="flip" aria-pressed="false">Show negative</button>
+      <a class="btn small" href="/rolls/{{ r.id }}/contact.jpg" download>Download {{ r.id }}_contact.jpg</a>
+      <a class="btn small ghost" href="/rolls/{{ r.id }}/contact.jpg?negative=1" download>Negative{{ '' if has_original else ' (preview only)' }}</a>
     </div>
+    <p class="muted small">The download is the full-size positive, ready to drop into this roll's digiKam folder.{% if r.process == 'slide' %} Slide film: no inversion.{% elif not r.process %} Film type not set, converted as colour.{% endif %}</p>
     {% else %}
-    <p class="muted">No photo yet. Lay the sleeve on a light pad and shoot it straight on.</p>
+    <p class="muted">No contact sheet yet. Lay the sleeve on the light table and shoot it straight on, filling the frame.</p>
     {% endif %}
     <form method="post" action="/rolls/{{ r.id }}/photo" enctype="multipart/form-data" class="photoform">
-      <input type="file" name="photo" accept="image/*" capture="environment" required aria-label="Sleeve photo">
+      <input type="file" name="photo" accept="image/*" capture="environment" required aria-label="Contact sheet photo">
       <button class="btn small primary">{{ 'Replace' if r.photo else 'Upload' }}</button>
     </form>
   </section>
 
-  <section class="card">
+  <section class="card" id="scans">
+    <h2>Scans <span class="muted">· {{ scan_summary(r.picks, r.scans) }}</span></h2>
+    <form method="post" action="/rolls/{{ r.id }}/scans" class="scanform">
+      <div class="f">
+        <label for="picks">Worth scanning <span class="muted">(frame numbers off the film edge)</span></label>
+        <input id="picks" name="picks" value="{{ r.picks or '' }}" placeholder="4, 9, 17–19, 22A" autocomplete="off" spellcheck="false">
+        <div class="quick">
+          <button type="button" class="btn small ghost" data-fill="picks" data-value="none">Nothing (none)</button>
+          <button type="button" class="btn small ghost" data-fill="picks" data-value="all">Whole roll (all)</button>
+        </div>
+      </div>
+      <div class="f">
+        <label for="scans-in">Scanned</label>
+        <div class="framechips" id="framechips" aria-label="Tap a frame once it's scanned"></div>
+        <input id="scans-in" name="scans" value="{{ r.scans or '' }}" placeholder="frames done, or all" autocomplete="off" spellcheck="false">
+        <div class="quick">
+          <button type="button" class="btn small ghost" data-fill="scans-in" data-from="picks">All picks scanned</button>
+        </div>
+      </div>
+      <div class="actions"><button class="btn primary">Save scans</button></div>
+    </form>
+    <p class="muted small">Leave “worth scanning” blank until you've looked at the contact sheet. Frames you scan get added to the picks. Name scan files with the frame number exactly as printed, no padding: <code>{{ r.id }}_0.jpg</code>, <code>{{ r.id }}_00.jpg</code>, <code>{{ r.id }}_4.jpg</code>, <code>{{ r.id }}_14A.jpg</code>.</p>
+  </section>
+</div>
+
+<section class="card">
     <h2>Details</h2>
     <form method="post" action="/rolls/{{ r.id }}" class="rollform" data-for="{{ r.id }}">
       {% include "_fields.html" %}
       <div class="actions"><button class="btn primary">Save</button></div>
     </form>
-  </section>
-</div>
+</section>
 
 <details class="danger">
   <summary>Delete {{ r.id }}</summary>

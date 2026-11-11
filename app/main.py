@@ -10,14 +10,15 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from markupsafe import Markup, escape
+import markdown
 from PIL import Image, ImageOps
 
-from . import db, seasons, stats
+from . import contact, db, frames, seasons, stats
 from .db import STAGES, get_db, now
 
 APP_NAME = os.environ.get("APP_NAME", "Lux Archive")
 TRUTHY = ("1", "on", "true", "yes", "y")
-PHOTO_MAX = int(os.environ.get("LUX_PHOTO_MAX", "3200"))
+PREVIEW_MAX = int(os.environ.get("LUX_PHOTO_MAX", "3200"))
 
 
 def when(roll, short=False):
@@ -41,22 +42,25 @@ templates.env.globals.update(
     stage_state=db.stage_state,
     is_done=db.is_done,
     stage_label=stats.STAGE_LABEL,
+    scan_summary=frames.summary,
     asset_v=hashlib.sha256(b"".join(p.read_bytes() for p in sorted((HERE / "static").iterdir()))).hexdigest()[:10],
 )
 
 EXPORT_COLS = [
     "id", "start_year", "start_season", "end_year", "end_season", "date_tbc", "contents", "binder", "sleeve",
     "stock", "process", "camera", "scan_ref", "notes", "photo", "filed_at", "photographed_at",
-    "photographed_skipped", "scanned_at", "linked_at", "created_at", "updated_at",
+    "photographed_skipped", "scanned_at", "linked_at", "picks", "scans", "picked_at", "created_at", "updated_at",
 ]
 
+DONE_SQL = "filed_at IS NOT NULL AND photographed_at IS NOT NULL AND linked_at IS NOT NULL AND picked_at IS NOT NULL"
 FILTERS = {
     "all": ("All", "1=1"),
-    "todo": ("Not done", "NOT (filed_at IS NOT NULL AND photographed_at IS NOT NULL AND scanned_at IS NOT NULL AND linked_at IS NOT NULL)"),
-    "need-photo": ("To photograph", "filed_at IS NOT NULL AND photographed_at IS NULL"),
-    "need-scan": ("To scan", "scanned_at IS NULL"),
-    "need-link": ("To link", "scanned_at IS NOT NULL AND linked_at IS NULL"),
-    "done": ("Done", "filed_at IS NOT NULL AND photographed_at IS NOT NULL AND scanned_at IS NOT NULL AND linked_at IS NOT NULL"),
+    "todo": ("Not done", f"NOT ({DONE_SQL})"),
+    "need-photo": ("Contact sheet", "photographed_at IS NULL"),
+    "need-link": ("To link", "photographed_at IS NOT NULL AND linked_at IS NULL"),
+    "need-review": ("To review", "photographed_at IS NOT NULL AND picked_at IS NULL"),
+    "need-scan": ("To scan", "picks NOT IN ('', 'none') AND scanned_at IS NULL"),
+    "done": ("Done", DONE_SQL),
     "tbc": ("Year TBC", "date_tbc=1"),
 }
 
@@ -162,11 +166,12 @@ async def create_roll(request: Request, conn=Depends(get_db)):
     if conn.execute("SELECT 1 FROM rolls WHERE num=?", (num,)).fetchone():
         return RedirectResponse(f"/add?error={db.format_id(num)}+already+exists", 303)
     roll_id = insert_roll(conn, num, clean_fields(form), filed=bool(form.get("filed")))
-    if form.get("scanned"):
-        db.set_stage(conn, roll_id, "scanned", "done")
     upload = form.get("photo")
     if upload is not None and getattr(upload, "filename", ""):
-        save_photo(conn, roll_id, await upload.read())
+        try:
+            save_photo(conn, roll_id, await upload.read())
+        except Exception:
+            return RedirectResponse(f"/rolls/{roll_id}?error=photo", 303)
     if form.get("action") == "open":
         return RedirectResponse(f"/rolls/{roll_id}", 303)
     return RedirectResponse(f"/add?saved={roll_id}", 303)
@@ -260,15 +265,18 @@ def index(request: Request, sort: str = "id", dir: str = "asc", stage: str = "al
 
 
 @app.get("/rolls/{roll_id}", response_class=HTMLResponse)
-def roll_page(request: Request, roll_id: str, saved: int = 0, conn=Depends(get_db)):
+def roll_page(request: Request, roll_id: str, saved: int = 0, error: str = "", conn=Depends(get_db)):
     r = fetch_roll(conn, roll_id)
+    if r["photo"] and (db.PHOTO_DIR / r["photo"]).exists() and not photo_paths(r["id"])["positive"].exists():
+        write_positive(r["id"], r["process"])
     nav = conn.execute(
         "SELECT (SELECT id FROM rolls WHERE num<? ORDER BY num DESC LIMIT 1) AS prev, "
         "(SELECT id FROM rolls WHERE num>? ORDER BY num LIMIT 1) AS next",
         (r["num"], r["num"]),
     ).fetchone()
     return render(
-        request, "roll.html", r=r, d=dict(r), nav=nav, saved=saved,
+        request, "roll.html", r=r, d=dict(r), nav=nav, saved=saved, error=error,
+        has_original=(db.ORIG_DIR / f"{r['id']}.jpg").exists(),
         stocks=distinct(conn, "stock"), cameras=distinct(conn, "camera"), binders=distinct(conn, "binder"),
     )
 
@@ -281,10 +289,20 @@ async def update_roll(request: Request, roll_id: str, conn=Depends(get_db)):
     sets = ", ".join(f"{k}=?" for k in fields)
     conn.execute(f"UPDATE rolls SET {sets}, updated_at=? WHERE id=?", [*fields.values(), now(), r["id"]])
     db.log(conn, r["id"], "edit")
-    scanned, was = bool(form.get("scanned")), form.get("scanned_was") == "1"
-    if "scanned_was" in form and scanned != was:
-        db.set_stage(conn, r["id"], "scanned", "done" if scanned else False)
+    if r["photo"] and fields["process"] != r["process"]:
+        write_positive(r["id"], fields["process"])
     return RedirectResponse(f"/rolls/{r['id']}?saved=1", 303)
+
+
+@app.post("/rolls/{roll_id}/scans")
+async def update_scans(request: Request, roll_id: str, conn=Depends(get_db)):
+    r = fetch_roll(conn, roll_id)
+    form = await request.form()
+    try:
+        db.set_scans(conn, r["id"], form.get("picks"), form.get("scans"))
+    except ValueError as e:
+        return RedirectResponse(f"/rolls/{r['id']}?" + urlencode({"error": str(e)}) + "#scans", 303)
+    return RedirectResponse(f"/rolls/{r['id']}?saved=1#scans", 303)
 
 
 @app.post("/rolls/{roll_id}/delete")
@@ -292,20 +310,57 @@ def delete_roll(roll_id: str, conn=Depends(get_db)):
     r = fetch_roll(conn, roll_id)
     conn.execute("DELETE FROM rolls WHERE id=?", (r["id"],))
     conn.execute("DELETE FROM events WHERE roll_id=?", (r["id"],))
-    if r["photo"]:
-        (db.PHOTO_DIR / r["photo"]).unlink(missing_ok=True)
+    for path in photo_paths(r["id"]).values():
+        path.unlink(missing_ok=True)
     return RedirectResponse("/rolls", 303)
 
 
+def photo_paths(roll_id):
+    return {
+        "original": db.ORIG_DIR / f"{roll_id}.jpg",
+        "preview": db.PHOTO_DIR / f"{roll_id}.jpg",
+        "positive": db.PHOTO_DIR / f"{roll_id}_pos.jpg",
+    }
+
+
+def write_positive(roll_id, process):
+    paths = photo_paths(roll_id)
+    with Image.open(paths["preview"]) as img:
+        paths["positive"].write_bytes(contact.to_jpeg(contact.positive(img, process), 85))
+
+
 def save_photo(conn, roll_id, data):
-    img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
-    img.thumbnail((PHOTO_MAX, PHOTO_MAX), Image.LANCZOS)
-    name = f"{roll_id}.jpg"
-    img.save(db.PHOTO_DIR / name, "JPEG", quality=88, optimize=True, progressive=True)
-    conn.execute("UPDATE rolls SET photo=?, updated_at=? WHERE id=?", (name, now(), roll_id))
-    row = conn.execute("SELECT photographed_at, photographed_skipped FROM rolls WHERE id=?", (roll_id,)).fetchone()
-    if not row["photographed_at"] or row["photographed_skipped"]:
+    paths = photo_paths(roll_id)
+    img = Image.open(io.BytesIO(data))
+    if img.format == "JPEG":
+        paths["original"].write_bytes(data)
+    else:
+        paths["original"].write_bytes(contact.to_jpeg(ImageOps.exif_transpose(img).convert("RGB"), 95))
+    preview = ImageOps.exif_transpose(img).convert("RGB")
+    preview.thumbnail((PREVIEW_MAX, PREVIEW_MAX), Image.LANCZOS)
+    paths["preview"].write_bytes(contact.to_jpeg(preview, 85))
+    process = conn.execute("SELECT process FROM rolls WHERE id=?", (roll_id,)).fetchone()["process"]
+    write_positive(roll_id, process)
+    conn.execute("UPDATE rolls SET photo=?, updated_at=? WHERE id=?", (paths["preview"].name, now(), roll_id))
+    if not conn.execute("SELECT photographed_at FROM rolls WHERE id=?", (roll_id,)).fetchone()["photographed_at"]:
         db.set_stage(conn, roll_id, "photographed", "done")
+
+
+@app.get("/rolls/{roll_id}/contact.jpg")
+def contact_download(roll_id: str, negative: int = 0, conn=Depends(get_db)):
+    r = fetch_roll(conn, roll_id)
+    paths = photo_paths(r["id"])
+    src = paths["original"] if paths["original"].exists() else paths["preview"]
+    if not src.exists():
+        raise HTTPException(404, "No contact sheet yet")
+    if negative:
+        return FileResponse(src, filename=f"{r['id']}_contact_neg.jpg", headers={"Cache-Control": "no-cache"})
+    with Image.open(src) as img:
+        data = contact.to_jpeg(contact.positive(img, r["process"]), 92)
+    return Response(
+        data, media_type="image/jpeg",
+        headers={"Content-Disposition": f'attachment; filename="{r["id"]}_contact.jpg"', "Cache-Control": "no-cache"},
+    )
 
 
 @app.post("/rolls/{roll_id}/photo")
@@ -314,7 +369,7 @@ async def upload_photo(roll_id: str, photo: UploadFile = File(...), conn=Depends
     try:
         save_photo(conn, r["id"], await photo.read())
     except Exception:
-        raise HTTPException(400, "Could not read that image")
+        return RedirectResponse(f"/rolls/{r['id']}?error=photo", 303)
     return RedirectResponse(f"/rolls/{r['id']}", 303)
 
 
@@ -327,7 +382,10 @@ def photo_file(name: str):
 
 
 def stage_json(r):
-    return {"id": r["id"], "done": db.is_done(r), "stages": {s: db.stage_state(r, s) for s in STAGES}}
+    return {
+        "id": r["id"], "done": db.is_done(r), "stages": {s: db.stage_state(r, s) for s in STAGES},
+        "scans": frames.summary(r["picks"], r["scans"]),
+    }
 
 
 @app.post("/api/rolls/{roll_id}/stage")
@@ -337,7 +395,7 @@ async def api_stage(roll_id: str, request: Request, conn=Depends(get_db)):
     try:
         db.set_stage(conn, r["id"], body.get("stage"), body.get("value"))
     except ValueError:
-        raise HTTPException(400, "Unknown stage")
+        raise HTTPException(400, "Unknown stage or value")
     return JSONResponse(stage_json(fetch_roll(conn, r["id"])))
 
 
@@ -347,14 +405,20 @@ async def api_bulk(request: Request, conn=Depends(get_db)):
     stage, value = body.get("stage"), body.get("value")
     if stage not in STAGES:
         raise HTTPException(400, "Unknown stage")
-    target = "todo" if value is False else "skip" if value == "skip" else "done"
+    if stage != "picked" and value not in ("done", False):
+        raise HTTPException(400, "Unknown value")
     out = []
     for roll_id in body.get("ids", []):
         r = conn.execute("SELECT * FROM rolls WHERE id=?", (roll_id,)).fetchone()
-        if not r or db.stage_state(r, stage) == target:
+        if not r or (stage != "picked" and db.stage_state(r, stage) == ("todo" if value is False else "done")):
             continue
-        db.set_stage(conn, r["id"], stage, value)
-        out.append(stage_json(fetch_roll(conn, r["id"])))
+        try:
+            db.set_stage(conn, r["id"], stage, value)
+        except ValueError:
+            raise HTTPException(400, "Unknown value")
+        after = fetch_roll(conn, r["id"])
+        if (after["picks"], after["scans"], after[f"{stage}_at"]) != (r["picks"], r["scans"], r[f"{stage}_at"]):
+            out.append(stage_json(after))
     return JSONResponse({"updated": out})
 
 
@@ -452,12 +516,20 @@ def import_rows(conn, rows):
         if is_filed and row.get("filed_at"):
             conn.execute("UPDATE rolls SET filed_at=? WHERE id=?", (row["filed_at"], roll_id))
         updates = {}
-        for s in ("photographed", "scanned", "linked"):
+        for s in ("photographed", "linked"):
             val = row.get(f"{s}_at") or ("" if f"{s}_at" in row else row.get(s, ""))
             if val and val.lower() not in ("0", "no", "n", "false"):
                 updates[f"{s}_at"] = val if "T" in val else filed
         if row.get("photographed_skipped") in ("1", "true", "yes"):
-            updates["photographed_skipped"] = 1
+            updates.pop("photographed_at", None)
+        if "picks" in row:
+            for k in ("picks", "scans", "picked_at", "scanned_at"):
+                updates[k] = row.get(k) or ("" if k in ("picks", "scans") else None)
+        else:
+            val = row.get("scanned_at") or row.get("scanned", "")
+            if val and val.lower() not in ("0", "no", "n", "false"):
+                ts = val if "T" in val else filed
+                updates.update(picks=frames.ALL, scans=frames.ALL, picked_at=ts, scanned_at=ts)
         if row.get("photo") and (db.PHOTO_DIR / row["photo"]).exists():
             updates["photo"] = row["photo"]
         if updates:
@@ -475,3 +547,9 @@ async def import_csv(request: Request, file: UploadFile = File(...), conn=Depend
     dialect = csv.Sniffer().sniff(text.splitlines()[0], delimiters=",;\t") if text.strip() else csv.excel
     added, skipped, errors = import_rows(conn, csv.DictReader(io.StringIO(text), dialect=dialect))
     return render(request, "import.html", result={"added": added, "skipped": skipped, "errors": errors})
+
+
+@app.get("/docs", response_class=HTMLResponse)
+def docs_page(request: Request):
+    html = markdown.markdown((HERE / "docs.md").read_text(), extensions=["tables", "toc"], extension_configs={"toc": {"toc_depth": "2-3"}})
+    return render(request, "docs.html", body=Markup(html))

@@ -50,12 +50,8 @@
     <input id="camera" name="camera" value="{{ d.camera or '' }}" list="cameras" autocomplete="off" placeholder="optional">
   </div>
   <div class="f wide">
-    <label for="scan_ref">Scan folder / prefix</label>
-    <div class="withcheck">
-      <input id="scan_ref" name="scan_ref" value="{{ d.scan_ref or '' }}" autocomplete="off" placeholder="optional">
-      <input type="hidden" name="scanned_was" value="{{ 1 if d.scanned_at else 0 }}" data-mirror-was="scanned">
-      <label class="check"><input type="checkbox" name="scanned" value="1" {{ 'checked' if d.scanned_at }} data-mirror="scanned"> Confirmed scanned</label>
-    </div>
+    <label for="scan_ref">Lab scan folder <span class="muted">(if a lab scanned it)</span></label>
+    <input id="scan_ref" name="scan_ref" value="{{ d.scan_ref or '' }}" autocomplete="off" placeholder="optional">
   </div>
   <div class="f wide">
     <label for="notes">Notes</label>

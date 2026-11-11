@@ -22,9 +22,9 @@
 
 <section class="frames">
   {% for s in stages %}
-  <a class="frame-stat s-{{ s }}" href="/rolls?stage={{ {'filed':'all','photographed':'need-photo','scanned':'need-scan','linked':'need-link'}[s] }}">
+  <a class="frame-stat s-{{ s }}" href="/rolls?stage={{ {'filed':'all','photographed':'need-photo','linked':'need-link','picked':'need-review'}[s] }}">
     <span class="n">{{ counts[s] }}</span>
-    <span class="lbl">{{ stage_label[s] }}</span>
+    <span class="lbl">{{ 'Reviewed' if s == 'picked' else stage_label[s] }}</span>
     <span class="edge tiny">{{ loop.index }}/4</span>
   </a>
   {% endfor %}
@@ -34,7 +34,7 @@
   <section class="card">
     <h2>Progress</h2>
     {{ chart }}
-    <p class="muted small">Cumulative rolls per stage. A newly found old roll pushes the filed line up; nothing goes backwards.</p>
+    <p class="muted small">Cumulative rolls per stage. “Reviewed” means you've decided what to scan; {{ counts.scan_complete }} of {{ counts.scan_rolls }} rolls with picks are fully scanned.</p>
   </section>
 
   <section class="card">
@@ -50,9 +50,10 @@
     </div>
     <h2 class="mt">Next up</h2>
     <ul class="nextup">
-      <li><a href="/rolls?stage=need-photo"><span class="n">{{ counts.need_photo }}</span> filed, not photographed</a></li>
-      <li><a href="/rolls?stage=need-scan"><span class="n">{{ counts.need_scan }}</span> not scanned</a></li>
-      <li><a href="/rolls?stage=need-link"><span class="n">{{ counts.need_link }}</span> scanned, not linked in digiKam</a></li>
+      <li><a href="/rolls?stage=need-photo"><span class="n">{{ counts.need_photo }}</span> without a contact sheet</a></li>
+      <li><a href="/rolls?stage=need-link"><span class="n">{{ counts.need_link }}</span> contact sheet{{ 's' if counts.need_link != 1 }} not in digiKam yet</a></li>
+      <li><a href="/rolls?stage=need-review"><span class="n">{{ counts.need_review }}</span> contact sheet{{ 's' if counts.need_review != 1 }} to review for picks</a></li>
+      <li><a href="/rolls?stage=need-scan"><span class="n">{{ counts.need_scan }}</span> roll{{ 's' if counts.need_scan != 1 }} with picks to scan{% if counts.need_scan %} <span class="muted">· {{ counts.frames_left }} frames{% if counts.whole_left %} + {{ counts.whole_left }} whole roll{{ 's' if counts.whole_left > 1 }}{% endif %}</span>{% endif %}</a></li>
     </ul>
   </section>
 </div>

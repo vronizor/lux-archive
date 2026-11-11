@@ -1,20 +1,30 @@
 from datetime import date, datetime, timedelta
 from html import escape
 
+from . import frames
 from .db import STAGES, is_done
 
 SESSION_GAP = timedelta(minutes=45)
-STAGE_LABEL = {"filed": "Filed", "photographed": "Photographed", "scanned": "Scanned", "linked": "Linked"}
+STAGE_LABEL = {"filed": "Filed", "photographed": "Contact sheet", "linked": "Linked", "picked": "Scans"}
+LINE_LABEL = {"filed": "filed", "photographed": "contact sheets", "linked": "linked", "picked": "reviewed"}
+KIND_LABEL = {**LINE_LABEL, "scanned": "scanned"}
 
 
 def counts(rolls):
     out = {s: sum(1 for r in rolls if r[f"{s}_at"]) for s in STAGES}
     out["total"] = len(rolls)
     out["done"] = sum(1 for r in rolls if is_done(r))
-    out["need_photo"] = sum(1 for r in rolls if r["filed_at"] and not r["photographed_at"])
-    out["need_scan"] = sum(1 for r in rolls if not r["scanned_at"])
-    out["need_link"] = sum(1 for r in rolls if r["scanned_at"] and not r["linked_at"])
+    out["need_photo"] = sum(1 for r in rolls if not r["photographed_at"])
+    out["need_link"] = sum(1 for r in rolls if r["photographed_at"] and not r["linked_at"])
+    out["need_review"] = sum(1 for r in rolls if r["photographed_at"] and not r["picked_at"])
     out["tbc"] = sum(1 for r in rolls if r["date_tbc"])
+    with_picks = [r for r in rolls if r["picks"] not in ("", frames.NONE)]
+    open_ = [r for r in with_picks if not r["scanned_at"]]
+    out["need_scan"] = len(open_)
+    out["scan_rolls"] = len(with_picks)
+    out["scan_complete"] = len(with_picks) - len(open_)
+    out["frames_left"] = sum(len(frames.remaining(frames.load(r["picks"]), frames.load(r["scans"]))) for r in open_)
+    out["whole_left"] = sum(1 for r in open_ if r["picks"] == frames.ALL)
     return out
 
 
@@ -26,10 +36,10 @@ def sessions(events):
             g = groups[-1]
             g["end"] = ts
         else:
-            g = {"start": ts, "end": ts, "touched": {s: set() for s in STAGES}, "rolls": set()}
+            g = {"start": ts, "end": ts, "touched": {k: set() for k in KIND_LABEL}, "rolls": set()}
             groups.append(g)
         g["rolls"].add(e["roll_id"])
-        if e["kind"] in STAGES:
+        if e["kind"] in KIND_LABEL:
             g["touched"][e["kind"]].add(e["roll_id"])
     return groups
 
@@ -37,7 +47,7 @@ def sessions(events):
 def describe(session):
     if not session:
         return None
-    parts = [f"{len(ids)} {STAGE_LABEL[s].lower()}" for s, ids in session["touched"].items() if ids]
+    parts = [f"{len(ids)} {KIND_LABEL[k]}" for k, ids in session["touched"].items() if ids]
     if not parts:
         parts = [f"{len(session['rolls'])} rolls edited"]
     minutes = int((session["end"] - session["start"]).total_seconds() // 60)
@@ -91,7 +101,7 @@ def burnup_svg(rolls):
     step = 10 if top > 20 else 2
     top = -(-top // step) * step
 
-    W, H, L, R, T, B = 420, 190, 26, 104, 10, 22
+    W, H, L, R, T, B = 440, 190, 26, 124, 10, 22
     pw, ph = W - L - R, H - T - B
 
     def x(i):
@@ -123,14 +133,14 @@ def burnup_svg(rolls):
     for i in range(1, len(ends)):
         if ends[i][0] - ends[i - 1][0] < 13:
             ends[i][0] = ends[i - 1][0] + 13
-    overflow = ends[-1][0] - (T + ph)
-    if overflow > 0:
-        for e in ends:
-            e[0] -= overflow
+    limit = T + ph
+    for e in reversed(ends):
+        e[0] = min(e[0], limit)
+        limit = e[0] - 13
     for ly, s, v in ends:
         out.append(
             f'<text class="end s-{s}" x="{L + pw + 6}" y="{ly + 4:.1f}">'
-            f'<tspan class="n">{v}</tspan> {escape(STAGE_LABEL[s].lower())}</text>'
+            f'<tspan class="n">{v}</tspan> {escape(LINE_LABEL[s])}</text>'
         )
     out.append("</svg>")
     return "".join(out)
