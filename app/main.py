@@ -76,7 +76,13 @@ def startup():
     db.init()
 
 
+def shooting():
+    with db.connect() as conn:
+        return conn.execute("SELECT 1 FROM rolls WHERE loaded_at IS NOT NULL LIMIT 1").fetchone() is not None
+
+
 def render(request, name, **ctx):
+    ctx.setdefault("shooting", shooting())
     return templates.TemplateResponse(request, name, ctx)
 
 
@@ -246,6 +252,18 @@ async def life_step(request: Request, roll_id: str, step: str, conn=Depends(get_
         raise HTTPException(400, "Unknown step")
     target = form.get("next") or "/"
     return RedirectResponse(target if target.startswith("/") and not target.startswith("//") else "/", 303)
+
+
+@app.post("/rolls/{roll_id}/note")
+async def add_note(request: Request, roll_id: str, conn=Depends(get_db)):
+    r = fetch_roll(conn, roll_id)
+    form = await request.form()
+    note = (form.get("note") or "").strip()
+    if note:
+        contents = ", ".join(x for x in (r["contents"], note) if x)
+        conn.execute("UPDATE rolls SET contents=?, updated_at=? WHERE id=?", (contents, now(), r["id"]))
+        db.log(conn, r["id"], "edit")
+    return RedirectResponse("/", 303)
 
 
 @app.post("/batch/send")

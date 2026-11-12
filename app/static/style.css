@@ -465,7 +465,7 @@ code { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 
 .hero-acts { display: flex; gap: .6rem; flex-wrap: wrap; }
 .flight { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
 .flight > .card { margin-bottom: 0; }
-.cams { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .75rem; align-content: start; }
+.cams { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: .75rem; align-content: start; }
 .cams h2, .cams > p { grid-column: 1 / -1; margin-bottom: 0; }
 .cam { border: 1px solid var(--line); border-radius: 10px; padding: .7rem .8rem; display: flex; flex-direction: column; gap: .15rem; background: var(--lit-bg); }
 .cam-name { font-weight: 600; }
@@ -493,3 +493,7 @@ code { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 
 @media (max-width: 820px) { .flight { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .hero-acts { width: 100%; } .hero-acts .btn.big { flex: 1; } }
 @media (max-width: 420px) { nav a.docs { display: none; } }
+.cam-contents { margin: .3rem 0 0; font-size: .9rem; }
+.noteform { display: flex; gap: .3rem; margin-top: .4rem; }
+.noteform input { flex: 1; min-width: 0; font: inherit; font-size: .9rem; padding: .3rem .5rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.noteform input:focus { outline: none; border-color: var(--accent); }

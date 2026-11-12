@@ -18,8 +18,13 @@
     {% endif %}
   </div>
   <div class="hero-acts">
+    {% if shooting %}
+    <a class="btn big" href="/add">File a roll</a>
+    <a class="btn primary big" href="/load">+ Load a roll</a>
+    {% else %}
     <a class="btn big" href="/load">Load a roll</a>
     <a class="btn primary big" href="/add">+ File a roll</a>
+    {% endif %}
   </div>
 </section>
 
@@ -32,6 +37,11 @@
       <div class="cam-name">{{ r.camera or 'Camera?' }}</div>
       <div class="cam-film">{{ speed(r) }}</div>
       <div class="muted small"><a class="rid" href="/rolls/{{ r.id }}">{{ r.id }}</a> · since {{ r.loaded_at[:10] | fmtdate }}</div>
+      {% if r.contents %}<p class="cam-contents">{{ r.contents }}</p>{% endif %}
+      <form method="post" action="/rolls/{{ r.id }}/note" class="noteform">
+        <input name="note" placeholder="What's on it…" autocomplete="off" aria-label="Add to {{ r.id }}'s contents" enterkeyhint="done">
+        <button class="btn small ghost" aria-label="Add">+</button>
+      </form>
       <form method="post" action="/rolls/{{ r.id }}/life/shot"><button class="btn small">Unloaded</button></form>
     </div>
     {% else %}
@@ -41,7 +51,7 @@
   <div class="card">
     <h2>Next lab batch <span class="muted">· {{ flight.batch|length }}</span></h2>
     {% if flight.batch %}
-    <ul class="outlist">{% for r in flight.batch %}<li><a class="rid" href="/rolls/{{ r.id }}">{{ r.id }}</a> {{ speed(r) }}</li>{% endfor %}</ul>
+    <ul class="outlist">{% for r in flight.batch %}<li><a class="rid" href="/rolls/{{ r.id }}">{{ r.id }}</a> {{ speed(r) }}{% if r.contents %}<span class="muted small"> · {{ r.contents }}</span>{% endif %}</li>{% endfor %}</ul>
     <form method="post" action="/batch/send" class="sendform">
       <input name="lab" list="labs" value="{{ labs[0] if labs else '' }}" placeholder="Lab" aria-label="Lab" autocomplete="off">
       <button class="btn small primary">Send {{ flight.batch|length }} to lab</button>
