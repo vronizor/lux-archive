@@ -35,7 +35,7 @@ Dates fill themselves: loading sets the start season, unloading the end. Rolls t
 | Roll ID | `V001`, `V002`… Accession order, not shooting order. Never renumbered, never reused. New rolls are numbered at loading, so from now on accession order follows shooting order. |
 | EI | The speed the roll was shot at. Blank means box speed. Anything else means the lab pushed or pulled it. |
 | Dates | Season + year. Winter YYYY = Dec YYYY – Feb YYYY+1. Tick *Year TBC* when the year is a guess. |
-| Where | Binder + sleeve number. One roll per sleeve. |
+| Where | Binder + sleeve number, only once the roll is filed: unticking *Filed* clears it, and typing a binder on an unfiled roll ticks *Filed*. One roll per sleeve. A roll cut into short strips takes two consecutive sleeves (*Takes 2 sleeves*), shown as `B2/88–89`; keep both in the same binder. |
 | Frame numbers | As printed on the film edge: `00`, `0`, `1` … `36`. Half frames get an `A`: `14A`. Never the scan order. |
 | Contact sheet file | `V012_contact.jpg` (positive). The negative is `V012_contact_neg.jpg` if you ever want it. |
 | Scan files | Frame number exactly as printed, never padded: `V012_00.jpg`, `V012_0.jpg`, `V012_4.jpg`, `V012_14A.jpg`. Padding would turn frame 0 into `00` and collide with the real frame 00. digiKam's natural sort (Settings → Miscellaneous → Behavior) puts `_4` before `_14`. A re-scan of the same frame: `V012_14_v2.jpg` *(proposed)*. |

@@ -48,7 +48,15 @@
       });
       box.closest("tr")?.classList.toggle("done", data.done);
     });
+    document.querySelectorAll(`[data-roll="${data.id}"]`).forEach((box) => {
+      const cell = box.closest("tr")?.querySelector(".where");
+      if (cell) cell.textContent = data.where;
+    });
     document.querySelectorAll(`form[data-for="${data.id}"]`).forEach((form) => {
+      if (data.stages.filed !== "done") {
+        form.querySelectorAll("[name=binder], [name=sleeve]").forEach((i) => (i.value = ""));
+        form.querySelectorAll("[name=sleeves]").forEach((i) => (i.checked = false));
+      }
       form.querySelectorAll("[data-mirror]").forEach((cb) => (cb.checked = data.stages[cb.dataset.mirror] === "done"));
       form.querySelectorAll("[data-mirror-was]").forEach((h) => (h.value = data.stages[h.dataset.mirrorWas] === "done" ? 1 : 0));
     });
@@ -129,6 +137,7 @@
   if (placebar) {
     const binder = placebar.dataset.binder;
     const sleeveIn = document.getElementById("rsleeve");
+    const twoIn = document.getElementById("rtwo");
     const idIn = document.getElementById("placeid");
     const lastEl = document.getElementById("lastplaced");
     const undoBtn = document.getElementById("undo");
@@ -141,15 +150,16 @@
       const id = "V" + String(num).padStart(3, "0");
       const sleeve = parseInt(sleeveIn.value, 10) || 1;
       try {
-        const res = await post(`/api/rolls/${id}/place`, { binder, sleeve });
+        const res = await post(`/api/rolls/${id}/place`, { binder, sleeve, sleeves: twoIn.checked ? 2 : 1 });
         stack.push(res);
-        sleeveIn.value = sleeve + 1;
+        sleeveIn.value = res.next;
+        twoIn.checked = false;
         const row = rowFor(id);
         if (row) {
           row.classList.add("placed");
-          row.querySelector(".loc").textContent = `→ ${binder}/${sleeve}`;
+          row.querySelector(".loc").textContent = `→ ${res.where}`;
         }
-        say(`${id} → ${binder}/${sleeve}` + (res.clash.length ? ` · shares the sleeve with ${res.clash.join(", ")}` : ""), res.clash.length);
+        say(`${id} → ${res.where}` + (res.clash.length ? ` · shares a sleeve with ${res.clash.join(", ")}` : ""), res.clash.length);
         undoBtn.hidden = false;
       } catch (e) {
         let why = e.message;
@@ -162,14 +172,16 @@
       if (!last) return;
       const b = last.before;
       try {
-        await post(`/api/rolls/${last.id}/place`, { binder: b.binder, sleeve: b.sleeve, undo: true, unfile: !b.filed });
+        await post(`/api/rolls/${last.id}/place`, { binder: b.binder, sleeve: b.sleeve, sleeves: b.sleeves, undo: true, unfile: !b.filed });
         sleeveIn.value = last.sleeve;
+        twoIn.checked = last.sleeves > 1;
+        const was = b.filed ? b.where || "—" : "not filed";
         const row = rowFor(last.id);
         if (row) {
           row.classList.remove("placed");
-          row.querySelector(".loc").textContent = b.filed ? (b.binder || "—") + (b.sleeve ? `/${b.sleeve}` : "") : "not filed";
+          row.querySelector(".loc").textContent = was;
         }
-        say(`Undid ${last.id}; back to ${b.filed ? (b.binder || "—") + (b.sleeve ? "/" + b.sleeve : "") : "not filed"}.`);
+        say(`Undid ${last.id}; back to ${was}.`);
         undoBtn.hidden = stack.length === 0;
       } catch (e) {
         stack.push(last);
@@ -187,6 +199,16 @@
     });
   }
   document.getElementById("rbinder")?.addEventListener("change", (ev) => ev.target.form.requestSubmit());
+
+  const filedBox = document.getElementById("filedbox");
+  if (filedBox) {
+    const syncPlace = () => document.querySelectorAll("[data-place]").forEach((f) => {
+      f.classList.toggle("off", !filedBox.checked);
+      f.querySelectorAll("input").forEach((i) => (i.disabled = !filedBox.checked));
+    });
+    filedBox.addEventListener("change", syncPlace);
+    syncPlace();
+  }
 
   const keys = document.getElementById("keys");
   const showKeys = () => keys && !keys.open && keys.showModal();

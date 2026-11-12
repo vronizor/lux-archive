@@ -7,7 +7,7 @@
 {% endblock %}
 {% block main %}
 <h1>Re-file</h1>
-<p class="muted small">Pick a binder, then tap rolls in the order they go in. Each tap puts the roll in the next sleeve and marks it filed.</p>
+<p class="muted small">Pick a binder, then tap rolls in the order they go in. Each tap puts the roll in the next sleeve (or the next two, if it's cut short) and marks it filed.</p>
 
 <form class="card refilebar" method="get" action="/refile" id="refileform">
   <div class="f">
@@ -30,6 +30,7 @@
     <input id="placeid" inputmode="numeric" autocomplete="off" placeholder="Roll number, Enter to place" aria-label="Roll number">
     <button class="btn small primary">Place</button>
   </form>
+  <label class="check twoslv"><input type="checkbox" id="rtwo"> Next roll takes 2 sleeves <span class="muted">(cut short)</span></label>
   <div class="placelog">
     <span id="lastplaced" class="muted small">Nothing placed yet.</span>
     <button type="button" class="btn small ghost" id="undo" hidden>Undo</button>
@@ -47,7 +48,7 @@
   <li><button type="button" class="placeable" data-id="{{ r.id }}">
     <span class="rid">{{ r.id }}</span>
     <span class="what">{{ r.contents or '—' }} <span class="muted small">{{ when(r, short=True) }}</span></span>
-    <span class="loc" data-was="{{ r.binder }}{% if r.sleeve %}/{{ r.sleeve }}{% endif %}">{% if r.filed_at %}{{ r.binder or '—' }}{% if r.sleeve %}/{{ r.sleeve }}{% endif %}{% else %}not filed{% endif %}</span>
+    <span class="loc">{% if r.filed_at %}{{ where(r) or '—' }}{% else %}not filed{% endif %}</span>
   </button></li>
   {% else %}
   <li class="muted">Nothing to place here.</li>

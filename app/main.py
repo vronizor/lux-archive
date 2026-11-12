@@ -47,12 +47,13 @@ templates.env.globals.update(
     phase=db.phase,
     phase_label=stats.PHASE_LABEL,
     scan_summary=frames.summary,
+    where=db.where,
     asset_v=hashlib.sha256(b"".join(p.read_bytes() for p in sorted((HERE / "static").iterdir()))).hexdigest()[:10],
 )
 
 EXPORT_COLS = [
     "id", "start_year", "start_season", "end_year", "end_season", "date_tbc", "contents", "binder", "sleeve",
-    "stock", "process", "camera", "scan_ref", "notes", "photo", "filed_at", "photographed_at",
+    "sleeves", "stock", "process", "camera", "scan_ref", "notes", "photo", "filed_at", "photographed_at",
     "photographed_skipped", "scanned_at", "linked_at", "picks", "scans", "picked_at",
     "ei", "lab", "loaded_at", "shot_at", "sent_at", "back_at", "created_at", "updated_at",
 ]
@@ -111,6 +112,8 @@ def clean_fields(form):
     if "lab" in form:
         extra["lab"] = (form.get("lab") or "").strip()
 
+    sleeve, sleeves = intval(form.get("sleeve")), intval(form.get("sleeves")) or 1
+
     start_year, end_year = intval(form.get("start_year")), intval(form.get("end_year"))
     start_season = seasons.norm_season(form.get("start_season")) if start_year else None
     end_season = seasons.norm_season(form.get("end_season")) if end_year else None
@@ -123,7 +126,8 @@ def clean_fields(form):
         "sort_key": seasons.sort_key(start_year, start_season),
         "contents": (form.get("contents") or "").strip(),
         "binder": (form.get("binder") or "").strip(),
-        "sleeve": intval(form.get("sleeve")),
+        "sleeve": sleeve,
+        "sleeves": sleeves if sleeve else 1,
         "stock": (form.get("stock") or "").strip(),
         "process": seasons.norm_process(form.get("process")),
         "camera": (form.get("camera") or "").strip(),
@@ -177,7 +181,7 @@ def add_form(request: Request, saved: str = "", error: str = "", conn=Depends(ge
         "start_year": (last["end_year"] or last["start_year"]) if last else "",
         "start_season": (last["end_season"] or last["start_season"]) if last else "",
         "binder": last["binder"] if last else "B1",
-        "sleeve": (last["sleeve"] + 1) if last and last["sleeve"] else 1,
+        "sleeve": db.after_slot(last) if last else 1,
         "camera": last["camera"] if last else "",
         "process": last["process"] if last else None,
     }
@@ -193,7 +197,11 @@ async def create_roll(request: Request, conn=Depends(get_db)):
     num = db.parse_id(form.get("id")) or db.next_num(conn)
     if conn.execute("SELECT 1 FROM rolls WHERE num=?", (num,)).fetchone():
         return RedirectResponse(f"/add?error={db.format_id(num)}+already+exists", 303)
-    roll_id = insert_roll(conn, num, clean_fields(form), filed=bool(form.get("filed")))
+    filed = bool(form.get("filed"))
+    fields = clean_fields(form)
+    if not filed:
+        fields.update(binder="", sleeve=None, sleeves=1)
+    roll_id = insert_roll(conn, num, fields, filed=filed)
     upload = form.get("photo")
     if upload is not None and getattr(upload, "filename", ""):
         try:
@@ -395,6 +403,8 @@ async def update_roll(request: Request, roll_id: str, conn=Depends(get_db)):
     sets = ", ".join(f"{k}=?" for k in fields)
     conn.execute(f"UPDATE rolls SET {sets}, updated_at=? WHERE id=?", [*fields.values(), now(), r["id"]])
     db.log(conn, r["id"], "edit")
+    if fields["binder"] and not r["filed_at"]:
+        db.set_stage(conn, r["id"], "filed", "done")
     if r["photo"] and fields["process"] != r["process"]:
         write_positive(r["id"], fields["process"])
     return RedirectResponse(f"/rolls/{r['id']}?saved=1", 303)
@@ -491,6 +501,7 @@ def stage_json(r):
     return {
         "id": r["id"], "done": db.is_done(r), "stages": {s: db.stage_state(r, s) for s in STAGES},
         "scans": frames.summary(r["picks"], r["scans"]),
+        "binder": r["binder"], "sleeve": r["sleeve"], "sleeves": r["sleeves"] or 1, "where": db.where(r),
     }
 
 
@@ -531,11 +542,18 @@ async def api_bulk(request: Request, conn=Depends(get_db)):
 REFILE_SHOWS = {"all": "All", "unfiled": "Not filed", "elsewhere": "Not in this binder"}
 
 
+OVERLAP_SQL = "binder=? AND sleeve <= ? AND sleeve + COALESCE(sleeves, 1) - 1 >= ?"
+
+
 def slot_clashes(conn):
-    return conn.execute(
-        "SELECT binder, sleeve, GROUP_CONCAT(id, ', ') AS ids FROM rolls "
-        "WHERE binder != '' AND sleeve IS NOT NULL GROUP BY binder, sleeve HAVING COUNT(*) > 1 ORDER BY binder, sleeve"
-    ).fetchall()
+    slots = {}
+    for r in conn.execute("SELECT id, binder, sleeve, sleeves FROM rolls WHERE binder != '' AND sleeve IS NOT NULL ORDER BY num"):
+        for k in range(r["sleeve"], r["sleeve"] + (r["sleeves"] or 1)):
+            slots.setdefault((r["binder"], k), []).append(r["id"])
+    return [
+        {"binder": b, "sleeve": k, "ids": ", ".join(ids)}
+        for (b, k), ids in sorted(slots.items(), key=lambda x: (x[0][0].lower(), x[0][1])) if len(ids) > 1
+    ]
 
 
 @app.get("/refile", response_class=HTMLResponse)
@@ -543,7 +561,8 @@ def refile_page(request: Request, binder: str = "", show: str = "all", conn=Depe
     binder = binder.strip()
     show = show if show in REFILE_SHOWS else "all"
     held = conn.execute(
-        "SELECT COUNT(*) AS n, COALESCE(MAX(sleeve), 0) AS top FROM rolls WHERE binder=? AND ?!=''", (binder, binder)
+        "SELECT COUNT(*) AS n, COALESCE(MAX(sleeve + COALESCE(sleeves, 1) - 1), 0) AS top FROM rolls WHERE binder=? AND ?!=''",
+        (binder, binder),
     ).fetchone()
     where = {"all": "1=1", "unfiled": "filed_at IS NULL", "elsewhere": "binder != ?"}[show]
     rolls = conn.execute(f"SELECT * FROM rolls WHERE {where} ORDER BY num", (binder,) if show == "elsewhere" else ()).fetchall()
@@ -560,20 +579,33 @@ async def api_place(roll_id: str, request: Request, conn=Depends(get_db)):
     binder = str(body.get("binder") or "").strip()
     sleeve = body.get("sleeve")
     sleeve = int(sleeve) if str(sleeve or "").isdigit() else None
+    sleeves = body.get("sleeves")
+    sleeves = int(sleeves) if str(sleeves or "").isdigit() and int(sleeves) > 0 else 1
     undo = bool(body.get("undo"))
     if not binder and not undo:
         raise HTTPException(400, "Pick a binder first")
-    before = {"binder": r["binder"], "sleeve": r["sleeve"], "filed": bool(r["filed_at"])}
-    conn.execute("UPDATE rolls SET binder=?, sleeve=?, updated_at=? WHERE id=?", (binder, sleeve, now(), r["id"]))
+    before = {
+        "binder": r["binder"], "sleeve": r["sleeve"], "sleeves": r["sleeves"] or 1,
+        "filed": bool(r["filed_at"]), "where": db.where(r),
+    }
+    conn.execute(
+        "UPDATE rolls SET binder=?, sleeve=?, sleeves=?, updated_at=? WHERE id=?",
+        (binder, sleeve, sleeves if sleeve else 1, now(), r["id"]),
+    )
     db.log(conn, r["id"], "edit")
     if undo and body.get("unfile"):
         db.set_stage(conn, r["id"], "filed", False)
     elif not undo and not r["filed_at"]:
         db.set_stage(conn, r["id"], "filed", "done")
+    after = fetch_roll(conn, r["id"])
     clash = [x["id"] for x in conn.execute(
-        "SELECT id FROM rolls WHERE binder=? AND sleeve=? AND id!=? AND ?!=''", (binder, sleeve, r["id"], binder)
-    )]
-    return JSONResponse({"id": r["id"], "binder": binder, "sleeve": sleeve, "before": before, "clash": clash})
+        f"SELECT id FROM rolls WHERE {OVERLAP_SQL} AND id!=? AND ?!=''",
+        (binder, (sleeve or 0) + after["sleeves"] - 1, sleeve, r["id"], binder),
+    )] if sleeve else []
+    return JSONResponse({
+        "id": r["id"], "binder": binder, "sleeve": sleeve, "sleeves": after["sleeves"],
+        "where": db.where(after), "next": db.after_slot(after), "before": before, "clash": clash,
+    })
 
 
 @app.get("/export.csv")

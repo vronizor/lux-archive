@@ -26,13 +26,14 @@
   <div class="f wide tbc-field">
     <label class="check"><input type="checkbox" name="date_tbc" value="1" {{ 'checked' if d.date_tbc }}> Year TBC <span class="muted">— not sure of the year</span></label>
   </div>
-  <div class="f short">
+  <div class="f short" data-place>
     <label for="binder">Binder</label>
     <input id="binder" name="binder" value="{{ d.binder or '' }}" list="binders" autocomplete="off">
   </div>
-  <div class="f short">
+  <div class="f short" data-place>
     <label for="sleeve">Sleeve</label>
     <input id="sleeve" name="sleeve" value="{{ d.sleeve or '' }}" inputmode="numeric" pattern="[0-9]*">
+    <label class="check twoslv"><input type="checkbox" name="sleeves" value="2" {{ 'checked' if (d.sleeves or 1) > 1 }}> Takes 2 sleeves</label>
   </div>
   <div class="f">
     <label for="stock">Stock</label>

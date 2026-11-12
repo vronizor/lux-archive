@@ -15,7 +15,7 @@
       <span class="sr">Roll ID</span>
       <input name="id" value="{{ d.id }}" class="edge-input" autocomplete="off" spellcheck="false">
     </label>
-    <label class="check"><input type="checkbox" name="filed" value="1" checked> Filed in binder</label>
+    <label class="check"><input type="checkbox" name="filed" value="1" id="filedbox" checked> Filed in binder</label>
   </div>
   {% set autofocus = true %}
   {% include "_fields.html" %}
@@ -28,5 +28,5 @@
     <button class="btn" name="action" value="open">Save &amp; open</button>
   </div>
 </form>
-<p class="muted small center">Enter saves and opens a fresh form. ID, date, binder and sleeve carry over from the last roll.</p>
+<p class="muted small center">Enter saves and opens a fresh form. ID, date, binder and sleeve carry over from the last filed roll. Untick “Filed in binder” and the roll gets no binder or sleeve.</p>
 {% endblock %}

@@ -207,6 +207,9 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 16px 4rem; }
 .f label { font-size: .78rem; font-weight: 500; color: var(--muted); }
 .pair { display: grid; grid-template-columns: 1.3fr 1fr; gap: .4rem; }
 .tbc-field { margin-top: -.35rem; }
+.f .check.twoslv { font-size: .82rem; font-weight: 400; color: var(--ink); }
+.placebar .check.twoslv { font-size: .9rem; font-weight: 400; margin-top: .5rem; }
+.f[data-place].off { opacity: .4; }
 .withcheck { display: flex; align-items: center; gap: .4rem .8rem; flex-wrap: wrap; }
 .withcheck input:not([type]) { flex: 1 1 14rem; width: auto; }
 .withcheck .check { font-size: .9rem; white-space: nowrap; color: var(--ink); }

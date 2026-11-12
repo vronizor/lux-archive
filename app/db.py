@@ -16,13 +16,13 @@ ARCHIVE_SQL = "(back_at IS NOT NULL OR (loaded_at IS NULL AND shot_at IS NULL))"
 
 FIELDS = [
     "start_year", "start_season", "end_year", "end_season", "date_tbc", "contents",
-    "binder", "sleeve", "stock", "process", "camera", "scan_ref", "notes",
+    "binder", "sleeve", "sleeves", "stock", "process", "camera", "scan_ref", "notes",
 ]
 
 ADDED_COLUMNS = {
     "date_tbc": "INTEGER DEFAULT 0", "process": "TEXT",
     "picks": "TEXT DEFAULT ''", "scans": "TEXT DEFAULT ''", "picked_at": "TEXT",
-    "ei": "INTEGER", "lab": "TEXT DEFAULT ''",
+    "ei": "INTEGER", "lab": "TEXT DEFAULT ''", "sleeves": "INTEGER DEFAULT 1",
     "loaded_at": "TEXT", "shot_at": "TEXT", "sent_at": "TEXT", "back_at": "TEXT",
 }
 
@@ -55,6 +55,20 @@ CREATE INDEX IF NOT EXISTS events_ts ON events(ts);
 """
 
 
+UNPLACE = "binder='', sleeve=NULL, sleeves=1"
+
+
+def where(r):
+    binder, sleeve, n = r["binder"] or "", r["sleeve"], r["sleeves"] or 1
+    if not sleeve:
+        return binder
+    return f"{binder}/{sleeve}" + (f"–{sleeve + n - 1}" if n > 1 else "")
+
+
+def after_slot(r):
+    return r["sleeve"] + (r["sleeves"] or 1) if r["sleeve"] else 1
+
+
 def now():
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
@@ -77,6 +91,7 @@ def init():
             if col not in cols:
                 conn.execute(f"ALTER TABLE rolls ADD COLUMN {col} {decl}")
         conn.execute("UPDATE rolls SET photographed_at=NULL, photographed_skipped=0 WHERE photographed_skipped=1")
+        conn.execute(f"UPDATE rolls SET {UNPLACE} WHERE filed_at IS NULL AND (binder != '' OR sleeve IS NOT NULL)")
 
 
 def get_db():
@@ -177,7 +192,8 @@ def set_stage(conn, roll_id, stage, value):
         )
         log(conn, roll_id, stage, ts)
     else:
-        conn.execute(f"UPDATE rolls SET {stage}_at=NULL, updated_at=? WHERE id=?", (ts, roll_id))
+        unplace = f", {UNPLACE}" if stage == "filed" else ""
+        conn.execute(f"UPDATE rolls SET {stage}_at=NULL{unplace}, updated_at=? WHERE id=?", (ts, roll_id))
         log(conn, roll_id, "edit", ts)
 
 
