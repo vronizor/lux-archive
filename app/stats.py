@@ -8,6 +8,7 @@ SESSION_GAP = timedelta(minutes=45)
 STAGE_LABEL = {"filed": "Filed", "photographed": "Contact sheet", "linked": "Linked", "picked": "Scans"}
 LINE_LABEL = {"filed": "filed", "photographed": "contact sheets", "linked": "linked", "picked": "reviewed"}
 KIND_LABEL = {**LINE_LABEL, "scanned": "scanned"}
+PHASE_LABEL = {"camera": "In camera", "batch": "Next lab batch", "lab": "At the lab", "archive": "Archive"}
 
 
 def counts(rolls):
@@ -18,6 +19,7 @@ def counts(rolls):
     out["need_link"] = sum(1 for r in rolls if r["photographed_at"] and not r["linked_at"])
     out["need_review"] = sum(1 for r in rolls if r["photographed_at"] and not r["picked_at"])
     out["tbc"] = sum(1 for r in rolls if r["date_tbc"])
+    out["need_file"] = sum(1 for r in rolls if not r["filed_at"])
     with_picks = [r for r in rolls if r["picks"] not in ("", frames.NONE)]
     open_ = [r for r in with_picks if not r["scanned_at"]]
     out["need_scan"] = len(open_)

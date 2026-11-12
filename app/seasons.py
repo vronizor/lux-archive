@@ -33,6 +33,12 @@ def norm_season(value):
     return _ALIASES.get(str(value).strip().lower())
 
 
+def from_date(d):
+    if d.month in (1, 2):
+        return d.year - 1, "Winter"
+    return d.year, ["Spring", "Summer", "Autumn", "Winter"][(d.month - 3) // 3]
+
+
 def sort_key(year, season):
     if not year:
         return None

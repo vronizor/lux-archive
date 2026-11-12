@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Load a roll · {{ app_name }}{% endblock %}
+{% block page %}load{% endblock %}
+{% block main %}
+{% if saved %}
+<section class="card lit loaded-toast" role="status">
+  <p class="edge">Loaded</p>
+  <p class="bigid">{{ saved }}</p>
+  <p>Write it on the canister now.</p>
+  <a class="btn small" href="/">Home</a> <a class="btn small" href="/rolls/{{ saved }}">Open {{ saved }}</a>
+</section>
+{% endif %}
+<form class="card {{ '' if saved else 'lit' }} rollform loadform" method="post" action="/load">
+  <div class="formhead"><p class="edge">Next number ▸ {{ next_id }}</p></div>
+  <div class="fields">
+    <div class="f">
+      <label for="camera">Camera</label>
+      <input id="camera" name="camera" value="{{ camera }}" list="cameras" autocomplete="off" required>
+    </div>
+    <div class="f">
+      <label for="stock">Stock</label>
+      <input id="stock" name="stock" list="stocks" autocomplete="off" placeholder="HP5+, Portra 400" required autofocus>
+    </div>
+    <div class="f short">
+      <label for="ei">Shot at (EI)</label>
+      <input id="ei" name="ei" inputmode="numeric" pattern="[0-9]*" placeholder="box">
+    </div>
+    <div class="f wide">
+      <span class="flabel" id="process-label">Film <span class="muted">(blank: guessed from past rolls of this stock)</span></span>
+      <div class="radioseg" role="radiogroup" aria-labelledby="process-label">
+        <label><input type="radio" name="process" value="" checked><span>?</span></label>
+        {% for key, name in processes.items() %}<label><input type="radio" name="process" value="{{ key }}"><span>{{ name }}</span></label>{% endfor %}
+      </div>
+    </div>
+    <div class="f wide">
+      <label class="check"><input type="checkbox" name="unloaded" value="1"> Already unloaded</label>
+    </div>
+  </div>
+  <div class="actions"><button class="btn primary big">Load {{ next_id }}</button></div>
+</form>
+<p class="muted small center">Leave EI blank when shooting at box speed. Tick “already unloaded” for a finished roll you never logged: it goes straight to the next lab batch.</p>
+<datalist id="stocks">{% for s in stocks %}<option value="{{ s }}">{% endfor %}</datalist>
+<datalist id="cameras">{% for s in cameras %}<option value="{{ s }}">{% endfor %}</datalist>
+{% endblock %}

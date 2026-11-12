@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from . import frames
+from . import frames, seasons
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", "/data"))
 DB_PATH = DATA_DIR / "lux.db"
@@ -11,6 +11,8 @@ PHOTO_DIR = DATA_DIR / "photos"
 ORIG_DIR = PHOTO_DIR / "originals"
 
 STAGES = ["filed", "photographed", "linked", "picked"]
+LIFE = ["loaded", "shot", "sent", "back"]
+ARCHIVE_SQL = "(back_at IS NOT NULL OR (loaded_at IS NULL AND shot_at IS NULL))"
 
 FIELDS = [
     "start_year", "start_season", "end_year", "end_season", "date_tbc", "contents",
@@ -20,6 +22,8 @@ FIELDS = [
 ADDED_COLUMNS = {
     "date_tbc": "INTEGER DEFAULT 0", "process": "TEXT",
     "picks": "TEXT DEFAULT ''", "scans": "TEXT DEFAULT ''", "picked_at": "TEXT",
+    "ei": "INTEGER", "lab": "TEXT DEFAULT ''",
+    "loaded_at": "TEXT", "shot_at": "TEXT", "sent_at": "TEXT", "back_at": "TEXT",
 }
 
 SCHEMA = """
@@ -111,6 +115,34 @@ def mark_issued(conn, num):
 
 def log(conn, roll_id, kind, ts=None):
     conn.execute("INSERT INTO events(ts, roll_id, kind) VALUES(?,?,?)", (ts or now(), roll_id, kind))
+
+
+def phase(r):
+    if r["back_at"]:
+        return "archive"
+    if r["sent_at"]:
+        return "lab"
+    if r["shot_at"]:
+        return "batch"
+    if r["loaded_at"]:
+        return "camera"
+    return "archive"
+
+
+def set_life(conn, roll_id, step, lab=None):
+    if step not in LIFE:
+        raise ValueError(step)
+    ts = now()
+    sets, vals = [f"{step}_at=COALESCE({step}_at, ?)"], [ts]
+    if step == "shot":
+        year, season = seasons.from_date(datetime.fromisoformat(ts).date())
+        sets += ["end_year=?", "end_season=?"]
+        vals += [year, season]
+    if step == "sent" and lab is not None:
+        sets.append("lab=?")
+        vals.append(lab)
+    conn.execute(f"UPDATE rolls SET {', '.join(sets)}, updated_at=? WHERE id=?", [*vals, ts, roll_id])
+    log(conn, roll_id, step, ts)
 
 
 def is_done(r):

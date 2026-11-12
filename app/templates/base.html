@@ -29,7 +29,8 @@ try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement
   </a>
   <nav>
     <a href="/rolls" class="{{ 'on' if request.url.path.startswith('/rolls') }}">Index</a>
-    <a href="/docs" class="{{ 'on' if request.url.path == '/docs' }}">Docs</a>
+    <a href="/docs" class="docs {{ 'on' if request.url.path == '/docs' }}">Docs</a>
+    <a href="/load" class="{{ 'on' if request.url.path == '/load' }}">Load</a>
     <a href="/add" class="add {{ 'on' if request.url.path == '/add' }}">+ Roll</a>
     <button type="button" class="kbd-hint" id="kbd" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">⌨</button>
     <button type="button" class="lamp" id="lamp" aria-label="Switch between light table and darkroom">

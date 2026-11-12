@@ -49,6 +49,16 @@
     <label for="camera">Camera</label>
     <input id="camera" name="camera" value="{{ d.camera or '' }}" list="cameras" autocomplete="off" placeholder="optional">
   </div>
+  {% if d.loaded_at or d.shot_at or d.ei or d.lab %}
+  <div class="f short">
+    <label for="ei">Shot at (EI)</label>
+    <input id="ei" name="ei" value="{{ d.ei or '' }}" inputmode="numeric" pattern="[0-9]*" placeholder="box">
+  </div>
+  <div class="f">
+    <label for="lab">Lab</label>
+    <input id="lab" name="lab" value="{{ d.lab or '' }}" autocomplete="off" placeholder="optional">
+  </div>
+  {% endif %}
   <div class="f wide">
     <label for="scan_ref">Lab scan folder <span class="muted">(if a lab scanned it)</span></label>
     <input id="scan_ref" name="scan_ref" value="{{ d.scan_ref or '' }}" autocomplete="off" placeholder="optional">

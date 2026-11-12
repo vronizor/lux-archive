@@ -22,6 +22,16 @@
   <a class="nav-arrow {{ 'off' if not nav.next }}" href="{{ '/rolls/' ~ nav.next if nav.next else '#' }}" aria-label="Next roll">›</a>
 </section>
 
+{% if r.loaded_at or r.shot_at %}{% set ph = phase(r) %}
+<section class="lifebar">
+  {% for step, label in [('loaded', 'Loaded'), ('shot', 'Unloaded'), ('sent', 'At lab'), ('back', 'Back')] %}
+  <span class="life {{ 'done' if r[step ~ '_at'] }}"><span class="name">{{ label }}</span> <span class="muted small">{{ r[step ~ '_at'][:10] | fmtdate if r[step ~ '_at'] else '—' }}</span></span>
+  {% endfor %}
+  <span class="life-meta">{{ r.camera or '' }}{% if r.ei %} · @{{ r.ei }}{% endif %}{% if r.lab %} · {{ r.lab }}{% endif %}</span>
+  {% set nxt = {'camera': ('shot', 'Unloaded'), 'batch': ('sent', 'Sent to lab'), 'lab': ('back', 'Back from lab')}.get(ph) %}
+  {% if nxt %}<form method="post" action="/rolls/{{ r.id }}/life/{{ nxt[0] }}"><input type="hidden" name="next" value="/rolls/{{ r.id }}"><button class="btn small primary">{{ nxt[1] }}</button></form>{% endif %}
+</section>
+{% endif %}
 <section class="stagebar" data-roll="{{ r.id }}">
   {% for s in stages %}{% set st = stage_state(r, s) %}
   <button type="button" class="stage {{ st }} s-{{ s }}" data-stage="{{ s }}" data-state="{{ st }}">

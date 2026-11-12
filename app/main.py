@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime
 import hashlib
 import io
 import os
@@ -14,7 +15,7 @@ import markdown
 from PIL import Image, ImageOps
 
 from . import contact, db, frames, seasons, stats
-from .db import STAGES, get_db, now
+from .db import ARCHIVE_SQL, LIFE, STAGES, get_db, now
 
 APP_NAME = os.environ.get("APP_NAME", "Lux Archive")
 TRUTHY = ("1", "on", "true", "yes", "y")
@@ -32,6 +33,7 @@ HERE = Path(__file__).parent
 app = FastAPI(title=APP_NAME, docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
+templates.env.filters["fmtdate"] = lambda iso: datetime.fromisoformat(iso).strftime("%-d %b") if iso else ""
 templates.env.globals.update(
     app_name=APP_NAME,
     seasons=seasons.SEASONS,
@@ -42,6 +44,8 @@ templates.env.globals.update(
     stage_state=db.stage_state,
     is_done=db.is_done,
     stage_label=stats.STAGE_LABEL,
+    phase=db.phase,
+    phase_label=stats.PHASE_LABEL,
     scan_summary=frames.summary,
     asset_v=hashlib.sha256(b"".join(p.read_bytes() for p in sorted((HERE / "static").iterdir()))).hexdigest()[:10],
 )
@@ -49,19 +53,21 @@ templates.env.globals.update(
 EXPORT_COLS = [
     "id", "start_year", "start_season", "end_year", "end_season", "date_tbc", "contents", "binder", "sleeve",
     "stock", "process", "camera", "scan_ref", "notes", "photo", "filed_at", "photographed_at",
-    "photographed_skipped", "scanned_at", "linked_at", "picks", "scans", "picked_at", "created_at", "updated_at",
+    "photographed_skipped", "scanned_at", "linked_at", "picks", "scans", "picked_at",
+    "ei", "lab", "loaded_at", "shot_at", "sent_at", "back_at", "created_at", "updated_at",
 ]
 
 DONE_SQL = "filed_at IS NOT NULL AND photographed_at IS NOT NULL AND linked_at IS NOT NULL AND picked_at IS NOT NULL"
 FILTERS = {
     "all": ("All", "1=1"),
-    "todo": ("Not done", f"NOT ({DONE_SQL})"),
-    "need-photo": ("Contact sheet", "photographed_at IS NULL"),
+    "todo": ("Not done", f"{ARCHIVE_SQL} AND NOT ({DONE_SQL})"),
+    "need-photo": ("Contact sheet", f"{ARCHIVE_SQL} AND photographed_at IS NULL"),
     "need-link": ("To link", "photographed_at IS NOT NULL AND linked_at IS NULL"),
     "need-review": ("To review", "photographed_at IS NOT NULL AND picked_at IS NULL"),
     "need-scan": ("To scan", "picks NOT IN ('', 'none') AND scanned_at IS NULL"),
     "done": ("Done", DONE_SQL),
     "tbc": ("Year TBC", "date_tbc=1"),
+    "out": ("Not back yet", f"NOT {ARCHIVE_SQL}"),
 }
 
 
@@ -93,6 +99,12 @@ def clean_fields(form):
         v = (v or "").strip()
         return int(v) if v.isdigit() else None
 
+    extra = {}
+    if "ei" in form:
+        extra["ei"] = intval(form.get("ei"))
+    if "lab" in form:
+        extra["lab"] = (form.get("lab") or "").strip()
+
     start_year, end_year = intval(form.get("start_year")), intval(form.get("end_year"))
     start_season = seasons.norm_season(form.get("start_season")) if start_year else None
     end_season = seasons.norm_season(form.get("end_season")) if end_year else None
@@ -111,28 +123,38 @@ def clean_fields(form):
         "camera": (form.get("camera") or "").strip(),
         "scan_ref": (form.get("scan_ref") or "").strip(),
         "notes": (form.get("notes") or "").strip(),
+        **extra,
     }
 
 
-def insert_roll(conn, num, fields, filed=True, ts=None):
+def insert_roll(conn, num, fields, filed=True, ts=None, event=None):
     ts = ts or now()
     roll_id = db.format_id(num)
     cols = ["id", "num", *fields.keys(), "created_at", "updated_at", "filed_at"]
     vals = [roll_id, num, *fields.values(), ts, ts, ts if filed else None]
     conn.execute(f"INSERT INTO rolls({','.join(cols)}) VALUES({','.join('?' * len(cols))})", vals)
     db.mark_issued(conn, num)
-    db.log(conn, roll_id, "filed" if filed else "created", ts)
+    db.log(conn, roll_id, event or ("filed" if filed else "created"), ts)
     return roll_id
+
+
+def in_flight(conn):
+    out = {p: [] for p in ("camera", "batch", "lab")}
+    for r in conn.execute(f"SELECT * FROM rolls WHERE NOT {ARCHIVE_SQL} ORDER BY num"):
+        out[db.phase(r)].append(r)
+    return out
 
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request, conn=Depends(get_db)):
-    rolls = conn.execute("SELECT * FROM rolls").fetchall()
+    rolls = conn.execute(f"SELECT * FROM rolls WHERE {ARCHIVE_SQL}").fetchall()
     events = conn.execute("SELECT * FROM events ORDER BY ts").fetchall()
-    groups = stats.sessions(events)
+    groups = stats.sessions([e for e in events if e["kind"] not in LIFE])
     return render(
         request, "home.html",
         counts=stats.counts(rolls),
+        flight=in_flight(conn),
+        labs=distinct(conn, "lab"),
         chart=Markup(stats.burnup_svg(rolls)),
         last=stats.describe(groups[-1] if groups else None),
         strip=stats.strip(groups),
@@ -143,7 +165,7 @@ def home(request: Request, conn=Depends(get_db)):
 
 @app.get("/add", response_class=HTMLResponse)
 def add_form(request: Request, saved: str = "", error: str = "", conn=Depends(get_db)):
-    last = conn.execute("SELECT * FROM rolls ORDER BY num DESC LIMIT 1").fetchone()
+    last = conn.execute("SELECT * FROM rolls WHERE filed_at IS NOT NULL ORDER BY num DESC LIMIT 1").fetchone()
     defaults = {
         "id": db.format_id(db.next_num(conn)),
         "start_year": (last["end_year"] or last["start_year"]) if last else "",
@@ -175,6 +197,71 @@ async def create_roll(request: Request, conn=Depends(get_db)):
     if form.get("action") == "open":
         return RedirectResponse(f"/rolls/{roll_id}", 303)
     return RedirectResponse(f"/add?saved={roll_id}", 303)
+
+
+@app.get("/load", response_class=HTMLResponse)
+def load_form(request: Request, saved: str = "", conn=Depends(get_db)):
+    last = conn.execute("SELECT camera FROM rolls WHERE loaded_at IS NOT NULL OR shot_at IS NOT NULL ORDER BY num DESC LIMIT 1").fetchone()
+    cameras = distinct(conn, "camera")
+    camera = last["camera"] if last else (cameras[0] if cameras else "")
+    return render(
+        request, "load.html", saved=saved, camera=camera, next_id=db.format_id(db.next_num(conn)),
+        stocks=distinct(conn, "stock"), cameras=cameras,
+    )
+
+
+@app.post("/load")
+async def load_roll(request: Request, conn=Depends(get_db)):
+    form = await request.form()
+    ts = now()
+    year, season = seasons.from_date(datetime.fromisoformat(ts).date())
+    stock = (form.get("stock") or "").strip()
+    guess = conn.execute(
+        "SELECT process FROM rolls WHERE stock=? AND process IS NOT NULL GROUP BY process ORDER BY COUNT(*) DESC LIMIT 1",
+        (stock,),
+    ).fetchone() if stock else None
+    ei = (form.get("ei") or "").strip()
+    fields = {
+        "start_year": year, "start_season": season, "sort_key": seasons.sort_key(year, season),
+        "stock": stock, "camera": (form.get("camera") or "").strip(),
+        "ei": int(ei) if ei.isdigit() else None,
+        "process": seasons.norm_process(form.get("process")) or (guess["process"] if guess else None),
+    }
+    unloaded = bool(form.get("unloaded"))
+    if unloaded:
+        fields.update(end_year=year, end_season=season, shot_at=ts)
+    else:
+        fields["loaded_at"] = ts
+    roll_id = insert_roll(conn, db.next_num(conn), fields, filed=False, ts=ts, event="shot" if unloaded else "loaded")
+    return RedirectResponse(f"/load?saved={roll_id}", 303)
+
+
+@app.post("/rolls/{roll_id}/life/{step}")
+async def life_step(request: Request, roll_id: str, step: str, conn=Depends(get_db)):
+    r = fetch_roll(conn, roll_id)
+    form = await request.form()
+    try:
+        db.set_life(conn, r["id"], step, lab=(form.get("lab") or "").strip() if "lab" in form else None)
+    except ValueError:
+        raise HTTPException(400, "Unknown step")
+    target = form.get("next") or "/"
+    return RedirectResponse(target if target.startswith("/") and not target.startswith("//") else "/", 303)
+
+
+@app.post("/batch/send")
+async def send_batch(request: Request, conn=Depends(get_db)):
+    form = await request.form()
+    lab = (form.get("lab") or "").strip()
+    for r in in_flight(conn)["batch"]:
+        db.set_life(conn, r["id"], "sent", lab=lab)
+    return RedirectResponse("/", 303)
+
+
+@app.post("/batch/back")
+def batch_back(conn=Depends(get_db)):
+    for r in in_flight(conn)["lab"]:
+        db.set_life(conn, r["id"], "back")
+    return RedirectResponse("/", 303)
 
 
 NONE = "_none"

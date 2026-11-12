@@ -17,7 +17,48 @@
     <p class="last">Last session <strong>{{ last.when }}</strong>: {{ last.what }} <span class="muted">· {{ last.duration }}</span></p>
     {% endif %}
   </div>
-  <a class="btn primary big" href="/add">+ File a roll</a>
+  <div class="hero-acts">
+    <a class="btn big" href="/load">Load a roll</a>
+    <a class="btn primary big" href="/add">+ File a roll</a>
+  </div>
+</section>
+
+{% macro speed(r) %}{{ r.stock or 'Unknown stock' }}{% if r.ei %} <span class="ei">@{{ r.ei }}</span>{% endif %}{% endmacro %}
+<section class="flight">
+  <div class="card cams">
+    <h2>In camera</h2>
+    {% for r in flight.camera %}
+    <div class="cam">
+      <div class="cam-name">{{ r.camera or 'Camera?' }}</div>
+      <div class="cam-film">{{ speed(r) }}</div>
+      <div class="muted small"><a class="rid" href="/rolls/{{ r.id }}">{{ r.id }}</a> · since {{ r.loaded_at[:10] | fmtdate }}</div>
+      <form method="post" action="/rolls/{{ r.id }}/life/shot"><button class="btn small">Unloaded</button></form>
+    </div>
+    {% else %}
+    <p class="muted small">Nothing loaded. <a href="/load">Load a roll</a>.</p>
+    {% endfor %}
+  </div>
+  <div class="card">
+    <h2>Next lab batch <span class="muted">· {{ flight.batch|length }}</span></h2>
+    {% if flight.batch %}
+    <ul class="outlist">{% for r in flight.batch %}<li><a class="rid" href="/rolls/{{ r.id }}">{{ r.id }}</a> {{ speed(r) }}</li>{% endfor %}</ul>
+    <form method="post" action="/batch/send" class="sendform">
+      <input name="lab" list="labs" value="{{ labs[0] if labs else '' }}" placeholder="Lab" aria-label="Lab" autocomplete="off">
+      <button class="btn small primary">Send {{ flight.batch|length }} to lab</button>
+    </form>
+    <datalist id="labs">{% for s in labs %}<option value="{{ s }}">{% endfor %}</datalist>
+    {% else %}<p class="muted small">No unloaded rolls waiting.</p>{% endif %}
+  </div>
+  <div class="card">
+    <h2>At the lab <span class="muted">· {{ flight.lab|length }}</span></h2>
+    {% if flight.lab %}
+    <ul class="outlist">{% for r in flight.lab %}<li>
+      <span class="o-main"><a class="rid" href="/rolls/{{ r.id }}">{{ r.id }}</a> {{ speed(r) }}<span class="muted small"> · {{ r.lab or 'lab' }}, {{ r.sent_at[:10] | fmtdate }}</span></span>
+      <form method="post" action="/rolls/{{ r.id }}/life/back" class="inline"><button class="btn small ghost">Back</button></form>
+    </li>{% endfor %}</ul>
+    {% if flight.lab|length > 1 %}<form method="post" action="/batch/back"><button class="btn small">All back</button></form>{% endif %}
+    {% else %}<p class="muted small">Nothing at the lab.</p>{% endif %}
+  </div>
 </section>
 
 <section class="frames">
@@ -50,6 +91,7 @@
     </div>
     <h2 class="mt">Next up</h2>
     <ul class="nextup">
+      {% if counts.need_file %}<li><a href="/refile?show=unfiled"><span class="n">{{ counts.need_file }}</span> roll{{ 's' if counts.need_file != 1 }} back from the lab to file</a></li>{% endif %}
       <li><a href="/rolls?stage=need-photo"><span class="n">{{ counts.need_photo }}</span> without a contact sheet</a></li>
       <li><a href="/rolls?stage=need-link"><span class="n">{{ counts.need_link }}</span> contact sheet{{ 's' if counts.need_link != 1 }} not in digiKam yet</a></li>
       <li><a href="/rolls?stage=need-review"><span class="n">{{ counts.need_review }}</span> contact sheet{{ 's' if counts.need_review != 1 }} to review for picks</a></li>

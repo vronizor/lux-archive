@@ -92,7 +92,7 @@
       <td class="sel"><input type="checkbox" class="rowsel" value="{{ r.id }}" aria-label="Select {{ r.id }}"></td>
       <td class="rid"><a href="/rolls/{{ r.id }}">{{ r.id }}</a></td>
       <td class="when">{{ when(r) }}</td>
-      <td class="what"><a href="/rolls/{{ r.id }}">{{ r.contents or '—' }}</a>{% if r.stock %}<span class="muted"> · {{ r.stock }}</span>{% endif %}{% if r.process %} <span class="proc p-{{ r.process }}">{{ processes[r.process] }}</span>{% endif %}</td>
+      <td class="what">{% if phase(r) != 'archive' %}<span class="phase">{{ phase_label[phase(r)] }}</span> {% endif %}<a href="/rolls/{{ r.id }}">{{ r.contents or '—' }}</a>{% if r.stock %}<span class="muted"> · {{ r.stock }}</span>{% endif %}{% if r.process %} <span class="proc p-{{ r.process }}">{{ processes[r.process] }}</span>{% endif %}</td>
       <td class="where">{{ r.binder }}{% if r.sleeve %}/{{ r.sleeve }}{% endif %}</td>
       <td class="stg">{% include "_chips.html" %}</td>
     </tr>
