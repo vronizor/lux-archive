@@ -200,6 +200,67 @@
   }
   document.getElementById("rbinder")?.addEventListener("change", (ev) => ev.target.form.requestSubmit());
 
+  document.querySelectorAll("input[list]").forEach((input) => {
+    const list = document.getElementById(input.getAttribute("list"));
+    if (!list) return;
+    const options = [...list.options].map((o) => o.value).filter(Boolean);
+    input.removeAttribute("list");
+    const host = input.parentElement;
+    if (getComputedStyle(host).position === "static") host.style.position = "relative";
+    const box = document.createElement("div");
+    box.className = "suggest";
+    box.setAttribute("role", "listbox");
+    box.hidden = true;
+    host.appendChild(box);
+    let shown = [], active = -1;
+    const close = () => { box.hidden = true; active = -1; };
+    const mark = () => [...box.children].forEach((b, k) => b.classList.toggle("on", k === active));
+    const pick = (value) => {
+      input.value = value;
+      close();
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    const open = () => {
+      const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+      shown = options.filter((o) => o !== input.value && words.every((w) => o.toLowerCase().includes(w))).slice(0, 8);
+      box.replaceChildren(...shown.map((o) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.tabIndex = -1;
+        b.textContent = o;
+        b.addEventListener("pointerdown", (ev) => { ev.preventDefault(); pick(o); });
+        return b;
+      }));
+      active = -1;
+      if (!shown.length) return close();
+      box.style.top = `${input.offsetTop + input.offsetHeight + 4}px`;
+      box.style.left = `${input.offsetLeft}px`;
+      box.style.width = `${Math.max(input.offsetWidth, 160)}px`;
+      box.hidden = false;
+    };
+    input.addEventListener("focus", open);
+    input.addEventListener("input", (ev) => ev.isTrusted && open());
+    input.addEventListener("blur", close);
+    input.addEventListener("keydown", (ev) => {
+      if (box.hidden) {
+        if (ev.key === "ArrowDown") { open(); ev.preventDefault(); }
+        return;
+      }
+      if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+        ev.preventDefault();
+        active = ev.key === "ArrowDown" ? (active + 1) % shown.length : active <= 0 ? shown.length - 1 : active - 1;
+        mark();
+      } else if (ev.key === "Enter" && active >= 0 && !ev.metaKey && !ev.ctrlKey) {
+        ev.preventDefault();
+        pick(shown[active]);
+      } else if (ev.key === "Escape") {
+        ev.preventDefault();
+        close();
+      }
+    });
+  });
+
   const filedBox = document.getElementById("filedbox");
   if (filedBox) {
     const syncPlace = () => document.querySelectorAll("[data-place]").forEach((f) => {
