@@ -492,7 +492,7 @@ code { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 
 .loadform .actions .btn { width: 100%; }
 @media (max-width: 820px) { .flight { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .hero-acts { width: 100%; } .hero-acts .btn.big { flex: 1; } }
-@media (max-width: 420px) { nav a.docs { display: none; } }
+@media (max-width: 420px) { nav a.docs, .wordmark { display: none; } }
 .cam-contents { margin: .3rem 0 0; font-size: .9rem; }
 .cam-notes { margin: .3rem 0 0; padding-left: 1rem; font-size: .85rem; color: var(--muted); }
 .noteform { display: flex; flex-direction: column; gap: .35rem; margin-top: .5rem; }

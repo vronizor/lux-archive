@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Docs · {{ app_name }}{% endblock %}
-{% block page %}docs{% endblock %}
+{% block title %}{{ title }} · {{ app_name }}{% endblock %}
+{% block page %}{{ doc }}{% endblock %}
 {% block main %}
 <article class="card doc">
 {{ body }}
 </article>
-<p class="foot small">This page is <code>app/docs.md</code> in the repo. Edit it there.</p>
+<p class="foot small">This page is <code>app/{{ doc }}.md</code> in the repo. Edit it there.{% if doc == 'field' %} It stays readable offline once you've opened it on this device.{% endif %}</p>
+{% if doc == 'field' %}<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});</script>{% endif %}
 {% endblock %}

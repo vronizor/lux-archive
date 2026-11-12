@@ -655,7 +655,21 @@ async def import_csv(request: Request, file: UploadFile = File(...), conn=Depend
     return render(request, "import.html", result={"added": added, "skipped": skipped, "errors": errors})
 
 
+def md_page(request, name, title):
+    html = markdown.markdown((HERE / f"{name}.md").read_text(), extensions=["tables", "toc"], extension_configs={"toc": {"toc_depth": "2-3"}})
+    return render(request, "docs.html", body=Markup(html), doc=name, title=title)
+
+
 @app.get("/docs", response_class=HTMLResponse)
 def docs_page(request: Request):
-    html = markdown.markdown((HERE / "docs.md").read_text(), extensions=["tables", "toc"], extension_configs={"toc": {"toc_depth": "2-3"}})
-    return render(request, "docs.html", body=Markup(html))
+    return md_page(request, "docs", "Docs")
+
+
+@app.get("/field", response_class=HTMLResponse)
+def field_page(request: Request):
+    return md_page(request, "field", "Field")
+
+
+@app.get("/sw.js")
+def service_worker():
+    return FileResponse(HERE / "static" / "sw.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})

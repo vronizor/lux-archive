@@ -29,6 +29,7 @@ try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement
   </a>
   <nav>
     <a href="/rolls" class="{{ 'on' if request.url.path.startswith('/rolls') }}">Index</a>
+    <a href="/field" class="{{ 'on' if request.url.path == '/field' }}">Field</a>
     <a href="/docs" class="docs {{ 'on' if request.url.path == '/docs' }}">Docs</a>
     {% if shooting %}
     <a href="/add" class="{{ 'on' if request.url.path == '/add' }}">File</a>
