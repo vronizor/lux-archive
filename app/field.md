@@ -48,12 +48,26 @@ What to remember while shooting. One stop = double (+1) or half (−1) the light
 - **Exposure compensation is on the ISO dial.** It's the only way to give more or less light in auto.
 - **Reset compensation to 0 after the shot.** The classic mistake: twenty frames at +1.
 - **Manual shutter speeds** need the separate Olympus manual adapter.
+- **Flash sync is 1/60 or slower.** Mode dial on Manual Adapter with no adapter fitted gives a fixed flash speed (see Flash).
 
-## Flash
+## Flash: Vitacon Thyristor 828S
 
-*To fill in: flash model, guide number, and what it does with the OM-10.*
+Auto-thyristor flash: a sensor on the front cuts the flash once the subject has had enough light. It doesn't talk to the camera.
 
-Guide number rule: aperture = guide number ÷ distance in metres, at the ISO the guide number is quoted for.
+**With the OM-10, every time:**
+
+1. **Mode dial to Manual Adapter (no adapter fitted).** The shutter then fires at a fixed flash speed. In Auto the camera may pick faster than 1/60 and you get a black band across the frame.
+2. **Flash ISO slider to the roll's EI.** The scale stops at 800: for HP5 @1600, set 800 and close the lens one stop more than the dial says.
+3. **Pick an auto mode** with the switch on the front (the coloured dots), then set the lens to the aperture above the matching coloured tab on the dial.
+4. **Stay inside the distance band** marked by the same colour under the scale. Orange reaches further, green is for close subjects.
+5. **CHECK lights up after the shot** = the flash gave enough light. No CHECK: get closer or switch to the farther-reaching mode.
+6. **Mode dial back to Auto** when you're done.
+
+- **WIDE / NORMAL** slider on the dial: NORMAL for 35–50 mm lenses. WIDE only if a wide-angle panel is fitted on the flash head.
+- **Bouncing:** tilt the head up (90 = straight up) towards a white ceiling. The sensor still faces the subject, but the light travels further: stay in the near half of the band and check the CHECK lamp.
+- **Manual (no sensor):** aperture = guide number ÷ distance in metres. Reading the dial, the guide number is about 40 at ISO 400 (20 at ISO 100). Treat it as a starting point: old flashes often give less than rated.
+
+*To check once, without film:* open the back, set Manual Adapter, point the flash at a wall and fire. You should see the whole frame lit through the shutter. Then measure the flash foot's voltage if you have a multimeter (under 6 V is safe on any camera).
 
 ## Lab
 
