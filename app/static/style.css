@@ -494,6 +494,9 @@ code { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 
 @media (max-width: 640px) { .hero-acts { width: 100%; } .hero-acts .btn.big { flex: 1; } }
 @media (max-width: 420px) { nav a.docs { display: none; } }
 .cam-contents { margin: .3rem 0 0; font-size: .9rem; }
-.noteform { display: flex; gap: .3rem; margin-top: .4rem; }
-.noteform input { flex: 1; min-width: 0; font: inherit; font-size: .9rem; padding: .3rem .5rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.cam-notes { margin: .3rem 0 0; padding-left: 1rem; font-size: .85rem; color: var(--muted); }
+.noteform { display: flex; flex-direction: column; gap: .35rem; margin-top: .5rem; }
+.note-to { display: flex; gap: .35rem; }
+.note-to .btn { flex: 1; }
+.noteform input { width: 100%; font: inherit; font-size: .9rem; padding: .3rem .5rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
 .noteform input:focus { outline: none; border-color: var(--accent); }

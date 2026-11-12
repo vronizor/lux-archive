@@ -259,9 +259,10 @@ async def add_note(request: Request, roll_id: str, conn=Depends(get_db)):
     r = fetch_roll(conn, roll_id)
     form = await request.form()
     note = (form.get("note") or "").strip()
+    field = "notes" if form.get("to") == "notes" else "contents"
     if note:
-        contents = ", ".join(x for x in (r["contents"], note) if x)
-        conn.execute("UPDATE rolls SET contents=?, updated_at=? WHERE id=?", (contents, now(), r["id"]))
+        joined = ("\n" if field == "notes" else ", ").join(x for x in (r[field], note) if x)
+        conn.execute(f"UPDATE rolls SET {field}=?, updated_at=? WHERE id=?", (joined, now(), r["id"]))
         db.log(conn, r["id"], "edit")
     return RedirectResponse("/", 303)
 

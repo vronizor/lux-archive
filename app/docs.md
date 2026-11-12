@@ -19,7 +19,7 @@ A roll counts as **done** after step 4. Scanning keeps its own count (frames lef
 New rolls enter Lux Archive when you load them, not when you file them.
 
 1. **Load** (`/load`, from the phone). Camera, stock, and the EI you'll shoot at (blank = box speed). The roll gets the next number on the spot: write it on the canister. Forgot to log it? Tick *Already unloaded*.
-   While shooting, add a few words to the roll from its *In camera* card on the home page ("Gràcia party"). Each entry is appended to the roll's contents, so you don't have to reconstruct them from the contact sheet later.
+   While shooting, jot things down from the roll's *In camera* card on the home page. Type, then tap **+ Contents** for what's on the roll ("Gràcia party", appended with a comma) or **+ Note** for how it was shot ("frames 12–14 overexposed", "tried a red filter", one line each). Enter adds to contents.
 2. **Unloaded.** Tap it on the home page. The roll joins the *Next lab batch*, which can sit there for weeks.
 3. **Sent.** *Send to lab* marks the whole batch at once, with the lab's name. The batch list shows each roll's EI so you can tell the lab what to push.
 4. **Back.** The roll enters the archive, unfiled, and the steps below take over.

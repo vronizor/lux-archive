@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block page %}home{% endblock %}
 {% block main %}
-{% if counts.total == 0 %}
+{% if counts.total == 0 and not (flight.camera or flight.batch or flight.lab) %}
 <section class="empty card lit">
   <p class="edge">V001 ▸ 00</p>
   <h1>The archive is empty.</h1>
@@ -38,9 +38,13 @@
       <div class="cam-film">{{ speed(r) }}</div>
       <div class="muted small"><a class="rid" href="/rolls/{{ r.id }}">{{ r.id }}</a> · since {{ r.loaded_at[:10] | fmtdate }}</div>
       {% if r.contents %}<p class="cam-contents">{{ r.contents }}</p>{% endif %}
+      {% if r.notes %}<ul class="cam-notes">{% for n in r.notes.splitlines() if n.strip() %}<li>{{ n }}</li>{% endfor %}</ul>{% endif %}
       <form method="post" action="/rolls/{{ r.id }}/note" class="noteform">
-        <input name="note" placeholder="What's on it…" autocomplete="off" aria-label="Add to {{ r.id }}'s contents" enterkeyhint="done">
-        <button class="btn small ghost" aria-label="Add">+</button>
+        <input name="note" placeholder="Gràcia party · frames 12–14 +2 stops" autocomplete="off" aria-label="Add to {{ r.id }}" enterkeyhint="done">
+        <div class="note-to">
+          <button class="btn small" name="to" value="contents">+ Contents</button>
+          <button class="btn small" name="to" value="notes">+ Note</button>
+        </div>
       </form>
       <form method="post" action="/rolls/{{ r.id }}/life/shot"><button class="btn small">Unloaded</button></form>
     </div>
