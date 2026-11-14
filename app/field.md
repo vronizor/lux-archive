@@ -13,10 +13,12 @@ What to remember while shooting. One stop = double (+1) or half (−1) the light
 | Portra 400 | 400 | 100–400 | Normal, never push |
 | Portra 800 | 800 | 400–800 | Normal, never push |
 | Ultramax 400 | 400 | 200–400 | Normal, never push |
+| Metropolis XR | 100–400 | 100–400 | Normal C-41 at any EI in range |
 
 - **Push** (B&W only): the lab develops longer to make up for underexposure. Every stop above box speed is one stop of push.
 - **Colour negative** takes too much light far better than too little. Rate it at box speed or lower, never higher.
 - **XP2** absorbs the whole 50–800 range with normal development. Past 800, use HP5.
+- **LomoChrome Metropolis** (2021 formula): muted colours, punchy contrast, visible grain. XR = extended range: any EI from 100 to 400, even mixed on one roll, same development. Rated at 400 it tends to show less of its green cast.
 
 ## Pushing
 
@@ -68,6 +70,17 @@ Auto-thyristor flash: a sensor on the front cuts the flash once the subject has 
 - **Manual (no sensor):** aperture = guide number ÷ distance in metres. Reading the dial, the guide number is about 40 at ISO 400 (20 at ISO 100). Treat it as a starting point: old flashes often give less than rated.
 
 *To check once, without film:* open the back, set Manual Adapter, point the flash at a wall and fire. You should see the whole frame lit through the shutter. Then measure the flash foot's voltage if you have a multimeter (under 6 V is safe on any camera).
+
+## Harman Reusable Camera
+
+Reloadable plastic point-and-shoot. Nothing to set: 31 mm lens at a fixed f/10, fixed 1/120 s, focus-free from 1 m.
+
+- **Load ISO 400.** The exposure is fixed (about EV 13.5), so the film's latitude does all the work. 200 works in good light; anything slower underexposes outside full sun.
+- **What the fixed exposure gives at ISO 400:** bright sun ≈ 3 stops over, overcast or open shade ≈ right, indoors far too little. Colour negative and XP2 shrug off the sun; for anything darker than open shade, use the flash.
+- **Log the EI as the film's box speed** (Metropolis: 400). There is no ISO dial.
+- **Flash:** push the switch, wait for it to charge (up to ~15 s, AAA battery). At f/10 it doesn't carry far: keep the subject within 1–3 m. Also useful as fill against backlight.
+- **Viewfinder shows only ~70% of the frame**: the negative holds more around the edges than you framed. Nothing closer than 1 m; portraits from about 2 m.
+- **Rewind: keep the rewind button pressed the whole time** and turn the crank gently. It's plastic and can snap.
 
 ## Lab
 
