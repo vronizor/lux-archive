@@ -27,7 +27,7 @@ The app listens on `127.0.0.1:8410` (set `LUX_PORT` in `.env` to change it). Exp
 sudo tailscale serve --service=svc:photos --https=443 127.0.0.1:8410
 ```
 
-Update: `git pull && docker compose up -d --build`.
+Update: push a release tag (`git tag v1.2 && git push origin v1.2`, or a release on GitHub). The Pi deploys it within 5 minutes and rolls back if it doesn't come up; pushing to `main` alone deploys nothing. By hand on the Pi: `deploy lux`. Don't `git pull` in the Pi's checkout.
 
 Data lives in `./data` (SQLite `lux.db` + `photos/`), which is git-ignored.
 

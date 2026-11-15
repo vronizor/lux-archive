@@ -1,5 +1,6 @@
 # Lux Archive — notes for Claude
 
+- The Pi deploys release tags on its own: a push to `main` deploys nothing; a new `vX.Y` tag on main is built, checked and rolled back if it fails, within 5 minutes. Tag only when the owner asks for a release. Don't tell the owner to `git pull` on the Pi; by hand it is `deploy lux [REF]`.
 - Small personal app on joan-pi; keep it small. One container, SQLite, server-rendered Jinja, vanilla JS, no build step.
 - Roll IDs are immutable accession numbers. Never renumber, never reuse (`meta.last_issued` guards deletes).
 - Stage timestamps (`*_at`) are the progress history; `events` only feeds session inference. Keep both in sync via `db.set_stage`.
