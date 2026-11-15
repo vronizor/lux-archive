@@ -55,11 +55,13 @@ try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement
   <h3>Anywhere</h3>
   <dl>
     {{ row(['n'], 'File a new roll') }}
+    {{ row(['l'], 'Load a roll') }}
     {{ row(['i'], 'Index') }}
     {{ row(['h'], 'Home') }}
+    {{ row(['Shift', 'F'], 'Field') }}
     {{ row(['d'], 'Docs') }}
     {{ row(['/'], 'Search the index') }}
-    {{ row(['l'], 'Light table / darkroom') }}
+    {{ row(['t'], 'Light table / darkroom') }}
     {{ row(['?'], 'This card') }}
     {{ row(['Esc'], 'Leave a field, close this card') }}
   </dl>
