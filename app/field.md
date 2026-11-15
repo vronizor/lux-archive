@@ -4,7 +4,9 @@ What to remember while shooting. One stop = double (+1) or half (−1) the light
 
 [TOC]
 
-## My films
+## Film
+
+### My films
 
 | Film | Box | Rate at | Lab |
 | --- | --- | --- | --- |
@@ -20,7 +22,7 @@ What to remember while shooting. One stop = double (+1) or half (−1) the light
 - **XP2** absorbs the whole 50–800 range with normal development. Past 800, use HP5.
 - **LomoChrome Metropolis** (2021 formula): muted colours, punchy contrast, visible grain. XR = extended range: any EI from 100 to 400, even mixed on one roll, same development. Rated at 400 it tends to show less of its green cast.
 
-## Pushing
+### Pushing
 
 | HP5 rated at | Tell the lab |
 | --- | --- |
@@ -34,7 +36,7 @@ What to remember while shooting. One stop = double (+1) or half (−1) the light
 3. Mark the canister (`HP5 @1600`).
 4. Tell the lab when you drop it off.
 
-## Exposure
+### Exposure
 
 - **Colour negative: when in doubt, overexpose.** Shadows that got too little light can't be rescued.
 - **B&W: expose for the shadows.** Don't let a bright sky make the meter underexpose everything else.
@@ -43,16 +45,18 @@ What to remember while shooting. One stop = double (+1) or half (−1) the light
 - **Overexpose one shot:** compensation dial +1, then back to 0.
 - **Sunny 16** (needs a manual shutter speed): bright sun f/16 at 1/ISO. Light overcast f/11, heavy overcast f/8, open shade f/5.6, same shutter speed.
 
-## Olympus OM-10
+## Cameras
+
+### Olympus OM-10
 
 - **Aperture-priority automatic.** You pick the aperture, the camera picks the shutter speed.
 - **Changing the aperture doesn't change the exposure**, only depth of field. The camera compensates with the shutter.
 - **Exposure compensation is on the ISO dial.** It's the only way to give more or less light in auto.
 - **Reset compensation to 0 after the shot.** The classic mistake: twenty frames at +1.
 - **Manual shutter speeds** need the separate Olympus manual adapter.
-- **Flash sync is 1/60 or slower.** Mode dial on Manual Adapter with no adapter fitted gives a fixed flash speed (see Flash).
+- **Flash sync is 1/60 or slower.** Mode dial on Manual Adapter with no adapter fitted gives a fixed flash speed (see the flash below).
 
-## Flash: Vitacon Thyristor 828S
+### OM-10 flash: Vitacon Thyristor 828S
 
 Auto-thyristor flash: a sensor on the front cuts the flash once the subject has had enough light. It doesn't talk to the camera.
 
@@ -71,7 +75,21 @@ Auto-thyristor flash: a sensor on the front cuts the flash once the subject has 
 
 *To check once, without film:* open the back, set Manual Adapter, point the flash at a wall and fire. You should see the whole frame lit through the shutter. Then measure the flash foot's voltage if you have a multimeter (under 6 V is safe on any camera).
 
-## Harman Reusable Camera
+### Olympus AF-10 Super
+
+Pocket autofocus compact, the everyday and party camera. 35 mm f/3.5 lens, infrared autofocus from 0.7 m, shutter 1/45–1/400 s, aperture f/3.5–f/9. Everything is automatic.
+
+- **The sliding cover is the on switch.** Close it when done: it's also what protects the lens in a pocket.
+- **ISO comes from the DX code on the canister.** No dial, so no pushing and no rating a roll lower: log the EI as box speed.
+- **Flash switch: Auto / Off / Fill-in.** It goes back to Auto every time the cover closes. For natural light, switch to Off after opening.
+- **Indoors without flash it underexposes.** Its slowest speed is 1/45 at f/3.5: even on 400 film that's dusk-outdoors light, not a room. At parties leave it on Auto.
+- **Bright sun on 400 film ≈ 2 stops over** (it can't go past f/9 at 1/400). Fine for colour negative and XP2, dense but printable on HP5.
+- **Fill-in** against backlight: subject in front of a window or a bright sky.
+- **Autofocus reads the centre of the frame.** Keep the subject in the middle and wait for the focus mark in the viewfinder.
+- **Nothing closer than 0.7 m.**
+- **Battery: one CR123A or two AAA.** The CR123A puts less strain on the battery door.
+
+### Harman Reusable Camera
 
 Reloadable plastic point-and-shoot. Nothing to set: 31 mm lens at a fixed f/10, fixed 1/120 s, focus-free from 1 m.
 
