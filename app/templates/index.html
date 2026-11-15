@@ -3,6 +3,10 @@
 {% block page %}index{% endblock %}
 {% block keys %}
 {{ row(['f'], 'Open filters') }}
+{{ row(['j', 'k'], 'Next / previous row') }}
+{{ row(['Enter'], 'Open the row') }}
+{{ row(['x'], 'Select the row (Shift: the range since the last one)') }}
+{{ row(['Esc'], 'Clear the selection') }}
 {% endblock %}
 {% macro keep(skip=()) %}{% for k, v in state.items() if k not in skip %}{% if v is string or v is number %}{% if v != '' %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endif %}{% else %}{% for x in v %}<input type="hidden" name="{{ k }}" value="{{ x }}">{% endfor %}{% endif %}{% endfor %}{% endmacro %}
 {% macro arrow(key) %}<span class="ar">{{ ('↓' if dir == 'desc' else '↑') if sort == key else '↕' }}</span>{% endmacro %}

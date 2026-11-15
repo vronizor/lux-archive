@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Load a roll · {{ app_name }}{% endblock %}
 {% block page %}load{% endblock %}
+{% block keys %}
+{{ row(['Enter'], 'Load the roll') }}
+{{ row(['Ctrl', 'Enter'], 'Load the roll, from anywhere on the form') }}
+{% endblock %}
 {% block main %}
 {% if saved %}
 <section class="card lit loaded-toast" role="status">

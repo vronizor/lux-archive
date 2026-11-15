@@ -3,9 +3,11 @@
 {% block page %}roll{% endblock %}
 {% block keys %}
 {{ row(['←', '→'], 'Previous / next roll') }}
+{% if gap %}{{ row(['Shift', '←', '→'], 'Previous / next roll ' ~ gap.label) }}{% endif %}
 {{ row(['1', '2', '3'], 'Tick or untick a stage') }}
 {{ row(['4'], 'Jump to scan picks') }}
 {{ row(['v'], 'Contact sheet: positive / negative') }}
+{{ row(['p'], 'Upload a contact sheet photo') }}
 {{ row(['e'], 'Edit details') }}
 {{ row(['Ctrl', 'Enter'], 'Save details') }}
 {{ row(['↑', '↓'], 'In a year field: one year later / earlier') }}
@@ -13,7 +15,7 @@
 {% block main %}
 {% if saved %}<p class="toast" role="status">Saved.</p>{% endif %}
 {% if error %}<p class="toast err" role="alert">{{ "Could not read that image. JPEG or PNG please." if error == 'photo' else error }}</p>{% endif %}
-<section class="rollhead">
+<section class="rollhead"{% if gap %} data-gap-prev="{{ gap.prev or '' }}" data-gap-next="{{ gap.next or '' }}"{% endif %}>
   <a class="nav-arrow {{ 'off' if not nav.prev }}" href="{{ '/rolls/' ~ nav.prev if nav.prev else '#' }}" aria-label="Previous roll">‹</a>
   <div>
     <h1 class="edge big">{{ r.id }} <span class="tri">▸</span> <span class="sub">{{ when(r) }}</span></h1>
@@ -61,7 +63,7 @@
     <p class="muted">No contact sheet yet. Lay the sleeve on the light table and shoot it straight on, filling the frame.</p>
     {% endif %}
     <form method="post" action="/rolls/{{ r.id }}/photo" enctype="multipart/form-data" class="photoform">
-      <input type="file" name="photo" accept="image/*" capture="environment" required aria-label="Contact sheet photo">
+      <input type="file" id="photo-in" name="photo" accept="image/*" capture="environment" required aria-label="Contact sheet photo">
       <button class="btn small primary">{{ 'Replace' if r.photo else 'Upload' }}</button>
     </form>
   </section>

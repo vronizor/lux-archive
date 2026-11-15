@@ -310,6 +310,8 @@ table.rolls { width: 100%; border-collapse: collapse; background: var(--surface)
 .rolls th { text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 500; padding: .65rem .6rem; border-bottom: 1px solid var(--line); }
 .rolls td { padding: .5rem .6rem; border-top: 1px solid var(--line); vertical-align: middle; }
 .rolls tr:hover td { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.rolls tr.cur td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.rolls tr.cur td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .rolls tr.done .rid a { color: var(--muted); }
 .rolls .sel { width: 2rem; }
 .rolls .sel input { width: 17px; height: 17px; accent-color: var(--accent); }

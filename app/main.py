@@ -4,6 +4,7 @@ import hashlib
 import io
 import os
 from pathlib import Path
+import re
 from urllib.parse import urlencode
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -70,6 +71,14 @@ FILTERS = {
     "tbc": ("Year TBC", "date_tbc=1"),
     "out": ("Not back yet", f"NOT {ARCHIVE_SQL}"),
 }
+GAPS = [
+    ("not back from the lab", FILTERS["out"][1]),
+    ("not filed", f"{ARCHIVE_SQL} AND filed_at IS NULL"),
+    ("without a contact sheet", FILTERS["need-photo"][1]),
+    ("not in digiKam", FILTERS["need-link"][1]),
+    ("to review", FILTERS["need-review"][1]),
+    ("to scan", FILTERS["need-scan"][1]),
+]
 
 
 @app.on_event("startup")
@@ -171,6 +180,12 @@ def home(request: Request, conn=Depends(get_db)):
         n_sessions=len(groups),
         recent=conn.execute("SELECT * FROM rolls ORDER BY updated_at DESC LIMIT 5").fetchall(),
     )
+
+
+@app.get("/last")
+def last_touched(conn=Depends(get_db)):
+    r = conn.execute("SELECT id FROM rolls ORDER BY updated_at DESC LIMIT 1").fetchone()
+    return RedirectResponse(f"/rolls/{r['id']}" if r else "/", 303)
 
 
 @app.get("/add", response_class=HTMLResponse)
@@ -326,6 +341,10 @@ def index(request: Request, sort: str = "id", dir: str = "asc", stage: str = "al
     if None not in ys and ys[0] > ys[1]:
         ys = (ys[1], ys[0])
 
+    if re.fullmatch(r"[vV]?\d{1,3}", q.strip()):
+        hit = conn.execute("SELECT id FROM rolls WHERE num=?", (db.parse_id(q),)).fetchone()
+        if hit:
+            return RedirectResponse(f"/rolls/{hit['id']}", 303)
     where, params = FILTERS[stage][1], []
     if q.strip():
         like = f"%{q.strip()}%"
@@ -388,8 +407,17 @@ def roll_page(request: Request, roll_id: str, saved: int = 0, error: str = "", c
         "(SELECT id FROM rolls WHERE num>? ORDER BY num LIMIT 1) AS next",
         (r["num"], r["num"]),
     ).fetchone()
+    gap = None
+    for label, sql in GAPS:
+        if conn.execute(f"SELECT 1 FROM rolls WHERE id=? AND {sql}", (r["id"],)).fetchone():
+            gap = conn.execute(
+                f"SELECT ? AS label, (SELECT id FROM rolls WHERE num<? AND {sql} ORDER BY num DESC LIMIT 1) AS prev, "
+                f"(SELECT id FROM rolls WHERE num>? AND {sql} ORDER BY num LIMIT 1) AS next",
+                (label, r["num"], r["num"]),
+            ).fetchone()
+            break
     return render(
-        request, "roll.html", r=r, d=dict(r), nav=nav, saved=saved, error=error,
+        request, "roll.html", r=r, d=dict(r), nav=nav, gap=gap, saved=saved, error=error,
         has_original=(db.ORIG_DIR / f"{r['id']}.jpg").exists(),
         stocks=distinct(conn, "stock"), cameras=distinct(conn, "camera"), binders=distinct(conn, "binder"),
     )

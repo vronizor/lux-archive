@@ -283,6 +283,23 @@
     if (filters?.open && !filters.contains(ev.target)) filters.open = false;
   });
   if (page === "index" && location.hash === "#search") document.querySelector(".search")?.focus();
+  const rows = page === "index" ? [...document.querySelectorAll("table.rolls tbody tr")] : [];
+  let cur = -1;
+  const moveRow = (step) => {
+    if (!rows.length) return;
+    rows[cur]?.classList.remove("cur");
+    cur = cur < 0 ? (step > 0 ? 0 : rows.length - 1) : Math.min(rows.length - 1, Math.max(0, cur + step));
+    rows[cur].classList.add("cur");
+    rows[cur].scrollIntoView({ block: "nearest" });
+  };
+  const gapNav = document.querySelector(".rollhead[data-gap-prev]");
+  const photoIn = document.getElementById("photo-in");
+  let photoByKey = false;
+  photoIn?.addEventListener("change", () => {
+    if (photoByKey && photoIn.files.length) photoIn.form.requestSubmit();
+    photoByKey = false;
+  });
+  photoIn?.addEventListener("cancel", () => (photoByKey = false));
   const typing = (el) => el?.isContentEditable || (/^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName) && !/^(checkbox|radio|button|submit|file)$/.test(el.type));
   const go = (url) => (location.href = url);
 
@@ -321,11 +338,33 @@
     }
     if (ev.metaKey || ev.ctrlKey || ev.altKey || keys?.open) return;
     const k = ev.key;
+    if (page === "index" && rows.length) {
+      const row = rows[cur];
+      const rowAct = {
+        j: () => moveRow(1),
+        k: () => moveRow(-1),
+        x: () => row?.querySelector(".rowsel")?.dispatchEvent(new MouseEvent("click", { bubbles: true })),
+        X: () => row?.querySelector(".rowsel")?.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true })),
+        Enter: row && !t.closest?.("a, button, input, select, textarea, summary") ? () => go(row.querySelector(".rid a").href) : null,
+        Escape: bar && !bar.hidden ? () => document.getElementById("bulknone").click() : null,
+      }[k];
+      if (rowAct) {
+        ev.preventDefault();
+        return rowAct();
+      }
+    }
+    if (page === "roll" && ev.shiftKey && gapNav && (k === "ArrowLeft" || k === "ArrowRight")) {
+      ev.preventDefault();
+      const id = gapNav.dataset[k === "ArrowLeft" ? "gapPrev" : "gapNext"];
+      if (id) go(`/rolls/${id}`);
+      return;
+    }
     const act = {
       "?": showKeys,
       n: () => go("/add"),
       i: () => go("/rolls"),
       h: () => go("/"),
+      ".": () => go("/last"),
       d: () => go("/docs"),
       F: () => go("/field"),
       l: () => go("/load"),
@@ -343,6 +382,7 @@
       },
       ...Object.fromEntries([1, 2, 3, 4].map((n) => [n, () => document.querySelectorAll(".stagebar [data-stage]")[n - 1]?.click()])),
       v: () => document.getElementById("flip")?.click(),
+      p: () => { photoByKey = true; photoIn?.click(); },
     }[k]);
     if (!act) return;
     ev.preventDefault();
