@@ -6,7 +6,7 @@ The master index of Vincent's film rolls: one record per roll, four stages, and 
 - **Stages:** Filed → Contact sheet (sleeve photographed on the light table; every roll gets one) → Linked (`V###_contact-1.jpg` in digiKam) → Scans. Scans hold the frames worth scanning (`4, 9, 17-19`, `none`, `all`) and the frames scanned so far. A roll is done once the first three are ticked and its picks are decided; scanning keeps its own count and can go on afterwards. Frame numbers are the ones printed on the film edge.
 - **Docs** tab: habits, conventions and processes, from `app/docs.md`.
 - **Re-file** (Index → *Re-file into a binder*): pick a binder, then tap rolls (or type their numbers) in the order they go in. Each gets the next sleeve (tick *Next roll takes 2 sleeves* for a roll cut into short strips) and is marked filed; `u` undoes. Rolls sharing a binder/sleeve are listed so a transfer can be checked when it's done.
-- **Contact sheets** are kept full size in `data/photos/originals/`, plus a preview (`LUX_PHOTO_MAX`, 3200 px) and a positive made from it (the light table is found by colour and ignored; the clearest film sets black, so the orange mask goes; each channel is then balanced on the median of the frames, so a whole roll averages out neutral; slides are left as is). Bumping `contact.VERSION` drops cached positives at startup; each is rebuilt when its roll page is next opened. A roll can have several sheets (one per sleeve), numbered from 1 and never renumbered; files are `V###-N.jpg`. The roll page offers each full-size positive as `V###_contact-N.jpg` for digiKam. Single-sheet rolls from before this are moved to sheet 1 on startup.
+- **Contact sheets** are kept full size in `data/photos/originals/`, plus a preview (full size unless `LUX_PHOTO_MAX` caps it) and a positive made from it (the light table is found by colour and ignored; the clearest film sets black, so the orange mask goes; each channel is then balanced on the median of the frames, so a whole roll averages out neutral; slides are left as is). Bumping `contact.VERSION` drops cached positives at startup; each is rebuilt when its roll page is next opened. A roll can have several sheets (one per sleeve), numbered from 1 and never renumbered; files are `V###-N.jpg`. The roll page offers each full-size positive as `V###_contact-N.jpg` for digiKam. Single-sheet rolls from before this are moved to sheet 1 on startup.
 - **Where** (binder/sleeve) only exists for filed rolls: unticking *Filed* clears it. A roll cut short can take two consecutive sleeves (`B2/88–89`).
 - **Seasons:** Winter YYYY = Dec YYYY – Feb YYYY+1.
 - **Year TBC:** tick it when you're unsure of the year (an unsure season alone doesn't count). The roll still sorts by its best-guess date; *Year TBC* in the index lists them for a later pass.
@@ -41,7 +41,7 @@ crontab -e
 # 30 3 * * * $HOME/lux-archive/scripts/backup.sh >> $HOME/lux-backup.log 2>&1
 ```
 
-The script writes `rolls.csv`, `events.csv` and the contact-sheet previews (`photos/`) into `../lux-archive-data`, then commits and pushes if anything changed. Full-size originals are not backed up to git (too big); copy `data/photos/originals/` somewhere else (NAS) yourself. Positives are regenerated on restore. The Pi needs push access to that repo (a deploy key with write access works).
+The script writes `rolls.csv`, `events.csv` and the contact-sheet previews (`photos/`, capped at 3200 px) into `../lux-archive-data`, then commits and pushes if anything changed. Full-size originals are not backed up to git (too big); copy `data/photos/originals/` somewhere else (NAS) yourself. Positives are regenerated on restore. The Pi needs push access to that repo (a deploy key with write access works).
 
 Restore into an empty database:
 
@@ -59,7 +59,7 @@ docker compose exec -T lux python -m app.backup restore /backup
 | --- | --- | --- |
 | `APP_NAME` | `Lux Archive` | Display name |
 | `LUX_PORT` | `8410` | Host port (localhost only) |
-| `LUX_PHOTO_MAX` | `3200` | Long edge of contact-sheet previews, in px (originals are kept full size) |
+| `LUX_PHOTO_MAX` | `0` | Long edge of contact-sheet previews, in px; `0` keeps them full size. Changing it resizes each sheet when its roll page is next opened. The nightly backup always writes 3200 px copies |
 | `BACKUP_DIR` | `../lux-archive-data` | Backup repo checkout, mounted at `/backup` |
 
 ## Stack

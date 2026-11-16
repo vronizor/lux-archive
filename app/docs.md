@@ -80,5 +80,5 @@ Small units that each move a counter on the home page:
 ## Where things live
 
 - **Index:** SQLite on the Pi. Exported every night to the private `lux-archive-data` repo (`rolls.csv`, `events.csv`).
-- **Contact sheets:** full-size originals in `data/photos/originals/`, a 3200 px preview and its positive in `data/photos/`. Only the previews go to the nightly backup: the originals are too big for git. *Until the NAS is up, the originals exist only on the Pi's SSD.*
+- **Contact sheets:** full-size originals in `data/photos/originals/`, a full-size preview and its positive in `data/photos/`. The nightly backup keeps 3200 px copies of the previews: full size is too big for git. *Until the NAS is up, the originals exist only on the Pi's SSD.*
 - **digiKam:** contact sheets and scans, one folder per roll. Getting a contact sheet there is manual for now: download from the roll page, drop it in the folder, tick *Linked*.

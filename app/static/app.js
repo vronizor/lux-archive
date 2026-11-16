@@ -308,24 +308,34 @@
   const loupe = (() => {
     const btn = document.getElementById("loupe");
     if (!btn) return null;
+    const zoomBox = document.getElementById("loupezoom");
     const lens = document.createElement("div");
     lens.className = "loupe";
     lens.hidden = true;
     document.body.append(lens);
-    let on = false, power = 4, img = null, last = null;
+    const SPAN = [0.05, 0.5];
+    const clamp = (v) => Math.min(SPAN[1], Math.max(SPAN[0], v));
+    let on = false, fallback = 0.21, spans = {}, img = null, last = null;
     try {
       on = sessionStorage.getItem("lux-loupe") === "1";
-      power = Math.min(8, Math.max(2, parseInt(sessionStorage.getItem("lux-loupe-power"), 10) || 4));
+      fallback = clamp(parseFloat(localStorage.getItem("lux-loupe-span")) || fallback);
+      spans = JSON.parse(localStorage.getItem("lux-loupe-spans") || "{}");
     } catch (e) {}
     const save = () => {
       try {
         sessionStorage.setItem("lux-loupe", on ? "1" : "0");
-        sessionStorage.setItem("lux-loupe-power", power);
+        localStorage.setItem("lux-loupe-span", fallback);
+        localStorage.setItem("lux-loupe-spans", JSON.stringify(spans));
       } catch (e) {}
     };
+    const current = () => img || document.querySelector(".sleeveimg");
+    const spanOf = (el) => spans[el?.dataset.sheet] || fallback;
+    const power = (el) => lens.offsetWidth / (spanOf(el) * el.getBoundingClientRect().width);
     const label = () => {
-      btn.textContent = on ? `Loupe ×${power}` : "Loupe";
+      const el = current();
+      btn.textContent = on && el ? `Loupe ×${power(el).toFixed(1)}` : "Loupe";
       btn.setAttribute("aria-pressed", on);
+      if (zoomBox) zoomBox.hidden = !on;
       document.body.classList.toggle("loupe-on", on);
       if (!on) lens.hidden = true;
     };
@@ -335,16 +345,30 @@
       const { x, y, touch } = last;
       if (x < r.left || x > r.right || y < r.top || y > r.bottom) return (lens.hidden = true);
       lens.hidden = false;
-      const size = lens.offsetWidth;
-      lens.style.left = `${x}px`;
-      lens.style.top = `${touch ? y - size * 0.7 : y}px`;
+      const p = power(img);
+      const w = lens.offsetWidth, h = lens.offsetHeight;
+      const keep = (v, size, max) => Math.min(max - size / 2 - 4, Math.max(size / 2 + 4, v));
+      lens.style.left = `${keep(x, w, innerWidth)}px`;
+      lens.style.top = `${keep(touch ? y - h * 0.75 : y, h, innerHeight)}px`;
       lens.style.backgroundImage = `url("${img.currentSrc || img.src}")`;
-      lens.style.backgroundSize = `${r.width * power}px ${r.height * power}px`;
-      lens.style.backgroundPosition = `${size / 2 - (x - r.left) * power}px ${size / 2 - (y - r.top) * power}px`;
+      lens.style.backgroundSize = `${r.width * p}px ${r.height * p}px`;
+      lens.style.backgroundPosition = `${w / 2 - (x - r.left) * p}px ${h / 2 - (y - r.top) * p}px`;
     };
     const track = (ev) => {
-      img = ev.currentTarget;
+      if (img !== ev.currentTarget) {
+        img = ev.currentTarget;
+        label();
+      }
       last = { x: ev.clientX, y: ev.clientY, touch: ev.pointerType === "touch" };
+      place();
+    };
+    const zoom = (dir) => {
+      const el = current();
+      if (!on || !el) return;
+      const s = clamp(spanOf(el) * (dir > 0 ? 1 / 1.15 : 1.15));
+      spans[el.dataset.sheet] = fallback = s;
+      save();
+      label();
       place();
     };
     const toggle = () => {
@@ -361,16 +385,15 @@
       el.addEventListener("wheel", (ev) => {
         if (!on) return;
         ev.preventDefault();
-        power = Math.min(8, Math.max(2, power + (ev.deltaY < 0 ? 1 : -1)));
-        save();
-        label();
         track(ev);
+        zoom(ev.deltaY < 0 ? 1 : -1);
       }, { passive: false });
     });
     window.addEventListener("scroll", () => (lens.hidden = true), { passive: true });
     btn.addEventListener("click", toggle);
+    zoomBox?.querySelectorAll("[data-zoom]").forEach((b) => b.addEventListener("click", () => zoom(+b.dataset.zoom)));
     label();
-    return { toggle, refresh: place, isOn: () => on };
+    return { toggle, zoom, refresh: place, isOn: () => on };
   })();
 
   document.addEventListener("keydown", (ev) => {
@@ -453,6 +476,9 @@
       ...Object.fromEntries([1, 2, 3, 4].map((n) => [n, () => document.querySelectorAll(".stagebar [data-stage]")[n - 1]?.click()])),
       v: () => document.getElementById("flip")?.click(),
       z: () => loupe?.toggle(),
+      "+": () => loupe?.zoom(1),
+      "=": () => loupe?.zoom(1),
+      "-": () => loupe?.zoom(-1),
       Escape: loupe?.isOn() ? () => loupe.toggle() : null,
       p: () => { photoByKey = true; photoIn?.click(); },
     }[k]);

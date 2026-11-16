@@ -1,10 +1,16 @@
 import csv
+import os
 import shutil
 import sys
 from pathlib import Path
 
-from . import db
+from PIL import Image
+
+from . import contact, db
 from .main import EXPORT_COLS, import_rows, write_positive
+
+
+BACKUP_MAX = 3200
 
 
 def export(target):
@@ -28,8 +34,17 @@ def export(target):
             continue
         keep.add(src.name)
         dst = photos / src.name
-        if not dst.exists() or (dst.stat().st_size, int(dst.stat().st_mtime)) != (src.stat().st_size, int(src.stat().st_mtime)):
-            shutil.copy2(src, dst)
+        mtime = int(src.stat().st_mtime)
+        if dst.exists() and int(dst.stat().st_mtime) == mtime:
+            continue
+        with Image.open(src) as img:
+            if max(img.size) > BACKUP_MAX:
+                small = img.convert("RGB")
+                small.thumbnail((BACKUP_MAX, BACKUP_MAX), Image.LANCZOS)
+                dst.write_bytes(contact.to_jpeg(small, 85))
+            else:
+                shutil.copy2(src, dst)
+        os.utime(dst, (mtime, mtime))
     for old in photos.glob("*.jpg"):
         if old.name not in keep:
             old.unlink()

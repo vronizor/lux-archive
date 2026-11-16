@@ -20,7 +20,7 @@ from .db import ARCHIVE_SQL, LIFE, STAGES, get_db, now
 
 APP_NAME = os.environ.get("APP_NAME", "Lux Archive")
 TRUTHY = ("1", "on", "true", "yes", "y")
-PREVIEW_MAX = int(os.environ.get("LUX_PHOTO_MAX", "3200"))
+PREVIEW_MAX = int(os.environ.get("LUX_PHOTO_MAX", "0"))
 
 
 def when(roll, short=False):
@@ -417,8 +417,7 @@ def roll_page(request: Request, roll_id: str, saved: int = 0, error: str = "", c
         paths = db.sheet_paths(r["id"], n)
         if not paths["preview"].exists():
             continue
-        if not paths["positive"].exists():
-            write_positive(r["id"], n, r["process"])
+        refresh_sheet(r["id"], n, r["process"])
         sheets.append({"n": n, "has_original": paths["original"].exists()})
     nav = conn.execute(
         "SELECT (SELECT id FROM rolls WHERE num<? ORDER BY num DESC LIMIT 1) AS prev, "
@@ -486,6 +485,33 @@ def write_positive(roll_id, n, process):
         paths["positive"].write_bytes(contact.to_jpeg(contact.positive(img, process), 85))
 
 
+def preview_edge(original):
+    with Image.open(original) as img:
+        edge = max(img.size)
+    return min(edge, PREVIEW_MAX) if PREVIEW_MAX else edge
+
+
+def write_preview(roll_id, n):
+    paths = db.sheet_paths(roll_id, n)
+    with Image.open(paths["original"]) as img:
+        preview = ImageOps.exif_transpose(img).convert("RGB")
+    if PREVIEW_MAX:
+        preview.thumbnail((PREVIEW_MAX, PREVIEW_MAX), Image.LANCZOS)
+    paths["preview"].write_bytes(contact.to_jpeg(preview, 85))
+
+
+def refresh_sheet(roll_id, n, process):
+    paths = db.sheet_paths(roll_id, n)
+    if paths["original"].exists():
+        with Image.open(paths["preview"]) as img:
+            stale = abs(max(img.size) - preview_edge(paths["original"])) > 2
+        if stale:
+            write_preview(roll_id, n)
+            paths["positive"].unlink(missing_ok=True)
+    if not paths["positive"].exists():
+        write_positive(roll_id, n, process)
+
+
 def save_photo(conn, roll_id, data, sheet=None):
     r = conn.execute("SELECT photo, process, photographed_at, sleeves FROM rolls WHERE id=?", (roll_id,)).fetchone()
     nums = db.sheet_nums(r["photo"])
@@ -496,9 +522,7 @@ def save_photo(conn, roll_id, data, sheet=None):
         paths["original"].write_bytes(data)
     else:
         paths["original"].write_bytes(contact.to_jpeg(ImageOps.exif_transpose(img).convert("RGB"), 95))
-    preview = ImageOps.exif_transpose(img).convert("RGB")
-    preview.thumbnail((PREVIEW_MAX, PREVIEW_MAX), Image.LANCZOS)
-    paths["preview"].write_bytes(contact.to_jpeg(preview, 85))
+    write_preview(roll_id, n)
     write_positive(roll_id, n, r["process"])
     db.set_sheets(conn, roll_id, set(nums) | {n})
     tick_if_complete(conn, roll_id)
