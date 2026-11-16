@@ -312,7 +312,62 @@
     const lens = document.createElement("div");
     lens.className = "loupe";
     lens.hidden = true;
+    lens.innerHTML = '<div class="loupe-hud"><span class="buf"></span><span class="picks"></span><span class="msg"></span></div>';
     document.body.append(lens);
+    const hud = { buf: lens.querySelector(".buf"), picks: lens.querySelector(".picks"), msg: lens.querySelector(".msg") };
+    const rollId = document.querySelector(".stagebar")?.dataset.roll;
+    const picksField = document.getElementById("picks");
+    const pickForm = document.getElementById("pickform");
+    let buffer = "", msgTimer = null;
+    const showHud = (msg) => {
+      hud.buf.textContent = buffer ? `${buffer}▏` : "#";
+      const picks = picksField?.value.trim();
+      hud.picks.textContent = picks ? `Picks: ${picks}` : "Type a frame number, Enter to pick";
+      if (msg !== undefined) {
+        hud.msg.textContent = msg;
+        clearTimeout(msgTimer);
+        msgTimer = setTimeout(() => (hud.msg.textContent = ""), 2500);
+      }
+    };
+    const pick = async (frame) => {
+      try {
+        const res = await post(`/api/rolls/${rollId}/pick`, { frame });
+        if (picksField) {
+          picksField.value = res.picks;
+          picksField.dispatchEvent(new Event("input"));
+        }
+        paint(res);
+        const head = document.querySelector("#scans h2 .muted");
+        if (head) head.textContent = `· ${res.scans}`;
+        showHud(`${res.added ? "+" : "−"} ${res.frame}`);
+        return true;
+      } catch (e) {
+        let msg = e.message;
+        try { msg = JSON.parse(msg).detail || msg; } catch (_) {}
+        showHud(msg);
+        return false;
+      }
+    };
+    const key = (k) => {
+      if (/^\d$/.test(k) && !/\d\d|A/.test(buffer)) buffer += k;
+      else if ((k === "a" || k === "A") && /^\d{1,2}$/.test(buffer)) buffer += "A";
+      else if (k === "Backspace" && buffer) buffer = buffer.slice(0, -1);
+      else if (k === "Escape" && buffer) buffer = "";
+      else if (k === "Enter" && buffer) {
+        const f = buffer;
+        buffer = "";
+        showHud("…");
+        pick(f);
+        return true;
+      } else return /^\d$/.test(k) || (k === "a" || k === "A") && !!buffer;
+      showHud();
+      return true;
+    };
+    pickForm?.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const input = pickForm.querySelector("input");
+      if (input.value.trim() && await pick(input.value.trim())) input.value = "";
+    });
     const SPAN = [0.05, 0.5];
     const clamp = (v) => Math.min(SPAN[1], Math.max(SPAN[0], v));
     let on = false, fallback = 0.21, spans = {}, img = null, last = null;
@@ -336,6 +391,9 @@
       btn.textContent = on && el ? `Loupe ×${power(el).toFixed(1)}` : "Loupe";
       btn.setAttribute("aria-pressed", on);
       if (zoomBox) zoomBox.hidden = !on;
+      if (pickForm) pickForm.hidden = !on;
+      if (!on) buffer = "";
+      showHud();
       document.body.classList.toggle("loupe-on", on);
       if (!on) lens.hidden = true;
     };
@@ -395,7 +453,7 @@
     btn.addEventListener("click", toggle);
     zoomBox?.querySelectorAll("[data-zoom]").forEach((b) => b.addEventListener("click", () => zoom(+b.dataset.zoom)));
     label();
-    return { toggle, zoom, refresh: place, isOn: () => on };
+    return { toggle, zoom, key, refresh: place, isOn: () => on };
   })();
 
   document.addEventListener("keydown", (ev) => {
@@ -447,6 +505,10 @@
         ev.preventDefault();
         return rowAct();
       }
+    }
+    if (page === "roll" && loupe?.isOn() && loupe.key(k)) {
+      ev.preventDefault();
+      return;
     }
     if (page === "roll" && ev.shiftKey && gapNav && (k === "ArrowLeft" || k === "ArrowRight")) {
       ev.preventDefault();

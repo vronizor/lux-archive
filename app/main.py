@@ -605,6 +605,28 @@ async def api_stage(roll_id: str, request: Request, conn=Depends(get_db)):
     return JSONResponse(stage_json(fetch_roll(conn, r["id"])))
 
 
+@app.post("/api/rolls/{roll_id}/pick")
+async def api_pick(roll_id: str, request: Request, conn=Depends(get_db)):
+    body = await request.json()
+    r = fetch_roll(conn, roll_id)
+    try:
+        frame = frames.parse(str(body.get("frame", "")))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    if not isinstance(frame, list) or len(frame) != 1:
+        raise HTTPException(400, "One frame number, like 14 or 14A")
+    frame = frame[0]
+    picks, scans = frames.load(r["picks"]), frames.load(r["scans"])
+    if picks == frames.ALL:
+        raise HTTPException(409, "The whole roll is already picked")
+    if scans == frames.ALL or (isinstance(scans, list) and frame in scans):
+        raise HTTPException(409, f"{frame} is already scanned")
+    new, added = frames.toggle(picks, frame)
+    db.set_scans(conn, r["id"], frames.fmt(new), r["scans"])
+    after = fetch_roll(conn, r["id"])
+    return JSONResponse({**stage_json(after), "frame": frame, "added": added, "picks": after["picks"]})
+
+
 @app.post("/api/bulk")
 async def api_bulk(request: Request, conn=Depends(get_db)):
     body = await request.json()

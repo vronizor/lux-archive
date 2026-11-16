@@ -94,6 +94,13 @@ def combine(picks, scans):
     return picks, scans
 
 
+def toggle(picks, frame):
+    current = picks if isinstance(picks, list) else []
+    if frame in current:
+        return [f for f in current if f != frame], False
+    return sorted(current + [frame], key=_key), True
+
+
 def complete(picks, scans):
     if picks in ("", NONE):
         return False

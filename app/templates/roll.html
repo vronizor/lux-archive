@@ -9,6 +9,7 @@
 {{ row(['v'], 'Contact sheets: positive / negative') }}
 {{ row(['z'], 'Loupe on / off (Esc puts it down)') }}
 {{ row(['x', 'c'], 'Loupe: zoom out / in on this sheet') }}
+{{ row(['0–9', 'A', 'Enter'], 'Loupe on: type the frame number you see, Enter adds it to “Worth scanning” (again removes it)') }}
 {{ row(['p'], 'Add a contact sheet photo') }}
 {{ row(['e'], 'Edit details') }}
 {{ row(['Ctrl', 'Enter'], 'Save details') }}
@@ -79,6 +80,10 @@
         <button type="button" class="btn small" data-zoom="-1" aria-label="Zoom out (x)" title="Zoom out (x)">−</button>
         <button type="button" class="btn small" data-zoom="1" aria-label="Zoom in (c)" title="Zoom in (c)">+</button>
       </span>
+      <form class="pickform" id="pickform" hidden>
+        <input id="pickin" placeholder="Frame, e.g. 14A" autocomplete="off" autocapitalize="characters" spellcheck="false" size="9" aria-label="Frame number to pick">
+        <button class="btn small">Pick</button>
+      </form>
     </div>
     <p class="muted small">Downloads are full-size positives, ready to drop into this roll's digiKam folder.{% if r.process == 'slide' %} Slide film: no inversion.{% elif not r.process %} Film type not set, converted as colour.{% endif %}</p>
     {% else %}

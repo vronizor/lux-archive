@@ -372,6 +372,16 @@ table.rolls { width: 100%; border-collapse: collapse; background: var(--surface)
 #sheets > .photoacts { margin-top: .8rem; }
 .loupe-on .sleeveimg { cursor: none; touch-action: none; }
 .loupezoom { display: inline-flex; gap: .3rem; }
+.pickform { display: none; gap: .3rem; }
+.pickform input { width: 8rem; font: inherit; font-size: .9rem; padding: .3rem .5rem; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); }
+@media (hover: none) { .pickform:not([hidden]) { display: inline-flex; } }
+.loupe-hud {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: .35rem .7rem; display: flex; gap: .8rem; align-items: baseline;
+  background: rgb(0 0 0 / .62); color: #f3ead8; font-size: .85rem; border-radius: 0 0 10px 10px;
+}
+.loupe-hud .buf { font-family: "IBM Plex Mono", monospace; font-size: 1.15rem; color: var(--accent); min-width: 3ch; }
+.loupe-hud .msg { margin-left: auto; font-weight: 600; }
+.loupe-hud .picks { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; opacity: .85; }
 .loupezoom[hidden] { display: none; }
 .loupezoom .btn { min-width: 2.2rem; }
 #loupe[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
