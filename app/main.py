@@ -400,8 +400,14 @@ def index(request: Request, sort: str = "id", dir: str = "asc", stage: str = "al
 @app.get("/rolls/{roll_id}", response_class=HTMLResponse)
 def roll_page(request: Request, roll_id: str, saved: int = 0, error: str = "", conn=Depends(get_db)):
     r = fetch_roll(conn, roll_id)
-    if r["photo"] and (db.PHOTO_DIR / r["photo"]).exists() and not photo_paths(r["id"])["positive"].exists():
-        write_positive(r["id"], r["process"])
+    sheets = []
+    for n in db.sheet_nums(r["photo"]):
+        paths = db.sheet_paths(r["id"], n)
+        if not paths["preview"].exists():
+            continue
+        if not paths["positive"].exists():
+            write_positive(r["id"], n, r["process"])
+        sheets.append({"n": n, "has_original": paths["original"].exists()})
     nav = conn.execute(
         "SELECT (SELECT id FROM rolls WHERE num<? ORDER BY num DESC LIMIT 1) AS prev, "
         "(SELECT id FROM rolls WHERE num>? ORDER BY num LIMIT 1) AS next",
@@ -418,7 +424,7 @@ def roll_page(request: Request, roll_id: str, saved: int = 0, error: str = "", c
             break
     return render(
         request, "roll.html", r=r, d=dict(r), nav=nav, gap=gap, saved=saved, error=error,
-        has_original=(db.ORIG_DIR / f"{r['id']}.jpg").exists(),
+        sheets=sheets,
         stocks=distinct(conn, "stock"), cameras=distinct(conn, "camera"), binders=distinct(conn, "binder"),
     )
 
@@ -433,8 +439,9 @@ async def update_roll(request: Request, roll_id: str, conn=Depends(get_db)):
     db.log(conn, r["id"], "edit")
     if fields["binder"] and not r["filed_at"]:
         db.set_stage(conn, r["id"], "filed", "done")
-    if r["photo"] and fields["process"] != r["process"]:
-        write_positive(r["id"], fields["process"])
+    if fields["process"] != r["process"]:
+        for n in db.sheet_nums(r["photo"]):
+            write_positive(r["id"], n, fields["process"])
     return RedirectResponse(f"/rolls/{r['id']}?saved=1", 303)
 
 
@@ -454,27 +461,23 @@ def delete_roll(roll_id: str, conn=Depends(get_db)):
     r = fetch_roll(conn, roll_id)
     conn.execute("DELETE FROM rolls WHERE id=?", (r["id"],))
     conn.execute("DELETE FROM events WHERE roll_id=?", (r["id"],))
-    for path in photo_paths(r["id"]).values():
-        path.unlink(missing_ok=True)
+    for n in db.sheet_nums(r["photo"]):
+        for path in db.sheet_paths(r["id"], n).values():
+            path.unlink(missing_ok=True)
     return RedirectResponse("/rolls", 303)
 
 
-def photo_paths(roll_id):
-    return {
-        "original": db.ORIG_DIR / f"{roll_id}.jpg",
-        "preview": db.PHOTO_DIR / f"{roll_id}.jpg",
-        "positive": db.PHOTO_DIR / f"{roll_id}_pos.jpg",
-    }
-
-
-def write_positive(roll_id, process):
-    paths = photo_paths(roll_id)
+def write_positive(roll_id, n, process):
+    paths = db.sheet_paths(roll_id, n)
     with Image.open(paths["preview"]) as img:
         paths["positive"].write_bytes(contact.to_jpeg(contact.positive(img, process), 85))
 
 
-def save_photo(conn, roll_id, data):
-    paths = photo_paths(roll_id)
+def save_photo(conn, roll_id, data, sheet=None):
+    r = conn.execute("SELECT photo, process, photographed_at FROM rolls WHERE id=?", (roll_id,)).fetchone()
+    nums = db.sheet_nums(r["photo"])
+    n = sheet if sheet in nums else max(nums, default=0) + 1
+    paths = db.sheet_paths(roll_id, n)
     img = Image.open(io.BytesIO(data))
     if img.format == "JPEG":
         paths["original"].write_bytes(data)
@@ -483,38 +486,54 @@ def save_photo(conn, roll_id, data):
     preview = ImageOps.exif_transpose(img).convert("RGB")
     preview.thumbnail((PREVIEW_MAX, PREVIEW_MAX), Image.LANCZOS)
     paths["preview"].write_bytes(contact.to_jpeg(preview, 85))
-    process = conn.execute("SELECT process FROM rolls WHERE id=?", (roll_id,)).fetchone()["process"]
-    write_positive(roll_id, process)
-    conn.execute("UPDATE rolls SET photo=?, updated_at=? WHERE id=?", (paths["preview"].name, now(), roll_id))
-    if not conn.execute("SELECT photographed_at FROM rolls WHERE id=?", (roll_id,)).fetchone()["photographed_at"]:
+    write_positive(roll_id, n, r["process"])
+    db.set_sheets(conn, roll_id, set(nums) | {n})
+    if not r["photographed_at"]:
         db.set_stage(conn, roll_id, "photographed", "done")
 
 
-@app.get("/rolls/{roll_id}/contact.jpg")
-def contact_download(roll_id: str, negative: int = 0, conn=Depends(get_db)):
+def remove_sheet(conn, roll_id, n):
+    for path in db.sheet_paths(roll_id, n).values():
+        path.unlink(missing_ok=True)
+    r = conn.execute("SELECT photo FROM rolls WHERE id=?", (roll_id,)).fetchone()
+    db.set_sheets(conn, roll_id, set(db.sheet_nums(r["photo"])) - {n})
+
+
+@app.get("/rolls/{roll_id}/contact-{n}.jpg")
+def contact_download(roll_id: str, n: int, negative: int = 0, conn=Depends(get_db)):
     r = fetch_roll(conn, roll_id)
-    paths = photo_paths(r["id"])
+    if n not in db.sheet_nums(r["photo"]):
+        raise HTTPException(404, "No such contact sheet")
+    paths = db.sheet_paths(r["id"], n)
     src = paths["original"] if paths["original"].exists() else paths["preview"]
     if not src.exists():
-        raise HTTPException(404, "No contact sheet yet")
+        raise HTTPException(404, "No such contact sheet")
+    name = f"{r['id']}_contact-{n}"
     if negative:
-        return FileResponse(src, filename=f"{r['id']}_contact_neg.jpg", headers={"Cache-Control": "no-cache"})
+        return FileResponse(src, filename=f"{name}_neg.jpg", headers={"Cache-Control": "no-cache"})
     with Image.open(src) as img:
         data = contact.to_jpeg(contact.positive(img, r["process"]), 92)
     return Response(
         data, media_type="image/jpeg",
-        headers={"Content-Disposition": f'attachment; filename="{r["id"]}_contact.jpg"', "Cache-Control": "no-cache"},
+        headers={"Content-Disposition": f'attachment; filename="{name}.jpg"', "Cache-Control": "no-cache"},
     )
 
 
 @app.post("/rolls/{roll_id}/photo")
-async def upload_photo(roll_id: str, photo: UploadFile = File(...), conn=Depends(get_db)):
+async def upload_photo(roll_id: str, photo: UploadFile = File(...), sheet: int = Form(0), conn=Depends(get_db)):
     r = fetch_roll(conn, roll_id)
     try:
-        save_photo(conn, r["id"], await photo.read())
+        save_photo(conn, r["id"], await photo.read(), sheet or None)
     except Exception:
         return RedirectResponse(f"/rolls/{r['id']}?error=photo", 303)
-    return RedirectResponse(f"/rolls/{r['id']}", 303)
+    return RedirectResponse(f"/rolls/{r['id']}#sheets", 303)
+
+
+@app.post("/rolls/{roll_id}/sheets/{n}/delete")
+def delete_sheet(roll_id: str, n: int, conn=Depends(get_db)):
+    r = fetch_roll(conn, roll_id)
+    remove_sheet(conn, r["id"], n)
+    return RedirectResponse(f"/rolls/{r['id']}#sheets", 303)
 
 
 @app.get("/photos/{name}")
@@ -696,14 +715,16 @@ def import_rows(conn, rows):
             if val and val.lower() not in ("0", "no", "n", "false"):
                 ts = val if "T" in val else filed
                 updates.update(picks=frames.ALL, scans=frames.ALL, picked_at=ts, scanned_at=ts)
-        if row.get("photo") and (db.PHOTO_DIR / row["photo"]).exists():
-            updates["photo"] = row["photo"]
+        photos = [n for n in (row.get("photo") or "").split() if (db.PHOTO_DIR / n).exists()]
+        if photos:
+            updates["photo"] = " ".join(photos)
         if updates:
             conn.execute(
                 f"UPDATE rolls SET {', '.join(f'{k}=?' for k in updates)} WHERE id=?",
                 [*updates.values(), roll_id],
             )
         added.append(roll_id)
+    db.migrate_sheets(conn)
     return added, skipped, errors
 
 

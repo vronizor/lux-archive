@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -92,6 +93,48 @@ def init():
                 conn.execute(f"ALTER TABLE rolls ADD COLUMN {col} {decl}")
         conn.execute("UPDATE rolls SET photographed_at=NULL, photographed_skipped=0 WHERE photographed_skipped=1")
         conn.execute(f"UPDATE rolls SET {UNPLACE} WHERE filed_at IS NULL AND (binder != '' OR sleeve IS NOT NULL)")
+        migrate_sheets(conn)
+
+
+def sheet_nums(photo):
+    nums = []
+    for name in (photo or "").split():
+        m = re.fullmatch(r"V\d+-(\d+)\.jpg", name)
+        if m:
+            nums.append(int(m.group(1)))
+    return sorted(nums)
+
+
+def sheet_name(roll_id, n):
+    return f"{roll_id}-{n}.jpg"
+
+
+def sheet_paths(roll_id, n):
+    return {
+        "original": ORIG_DIR / sheet_name(roll_id, n),
+        "preview": PHOTO_DIR / sheet_name(roll_id, n),
+        "positive": PHOTO_DIR / f"{roll_id}-{n}_pos.jpg",
+    }
+
+
+def set_sheets(conn, roll_id, nums):
+    photo = " ".join(sheet_name(roll_id, n) for n in sorted(nums)) or None
+    conn.execute("UPDATE rolls SET photo=?, updated_at=? WHERE id=?", (photo, now(), roll_id))
+
+
+def migrate_sheets(conn):
+    for r in conn.execute("SELECT id, photo FROM rolls WHERE photo IS NOT NULL AND photo != ''").fetchall():
+        if r["photo"] != f"{r['id']}.jpg":
+            continue
+        new = sheet_paths(r["id"], 1)
+        for old, dst in (
+            (ORIG_DIR / f"{r['id']}.jpg", new["original"]),
+            (PHOTO_DIR / f"{r['id']}.jpg", new["preview"]),
+            (PHOTO_DIR / f"{r['id']}_pos.jpg", new["positive"]),
+        ):
+            if old.exists() and not dst.exists():
+                old.rename(dst)
+        conn.execute("UPDATE rolls SET photo=? WHERE id=?", (sheet_name(r["id"], 1), r["id"]))
 
 
 def get_db():

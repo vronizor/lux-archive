@@ -48,8 +48,9 @@ def restore(source):
     with open(source / "rolls.csv", newline="") as f:
         added, skipped, errors = import_rows(conn, csv.DictReader(f))
     for r in conn.execute("SELECT id, process, photo FROM rolls WHERE photo IS NOT NULL AND photo != ''").fetchall():
-        if (db.PHOTO_DIR / r["photo"]).exists():
-            write_positive(r["id"], r["process"])
+        for n in db.sheet_nums(r["photo"]):
+            if db.sheet_paths(r["id"], n)["preview"].exists():
+                write_positive(r["id"], n, r["process"])
     conn.execute("DELETE FROM events")
     events = source / "events.csv"
     if events.exists():

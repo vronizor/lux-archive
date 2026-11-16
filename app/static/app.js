@@ -300,6 +300,8 @@
     photoByKey = false;
   });
   photoIn?.addEventListener("cancel", () => (photoByKey = false));
+  document.querySelectorAll("input[data-autosubmit]").forEach((i) =>
+    i.addEventListener("change", () => i.files.length && i.form.requestSubmit()));
   const typing = (el) => el?.isContentEditable || (/^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName) && !/^(checkbox|radio|button|submit|file)$/.test(el.type));
   const go = (url) => (location.href = url);
 
@@ -391,9 +393,8 @@
 
   const flip = document.getElementById("flip");
   flip?.addEventListener("click", () => {
-    const img = document.getElementById("sleeveimg");
     const neg = flip.getAttribute("aria-pressed") !== "true";
-    img.src = neg ? img.dataset.neg : img.dataset.pos;
+    document.querySelectorAll(".sleeveimg").forEach((img) => (img.src = neg ? img.dataset.neg : img.dataset.pos));
     flip.setAttribute("aria-pressed", neg);
     flip.textContent = neg ? "Show positive" : "Show negative";
   });

@@ -365,7 +365,12 @@ table.rolls { width: 100%; border-collapse: collapse; background: var(--surface)
 .stage.part .state { color: var(--ink); }
 .sleeve { margin: 0 0 .6rem; background: #000; border-radius: 10px; overflow: hidden; }
 .sleeve img { display: block; width: 100%; height: auto; transition: filter .3s; }
-.photoacts { display: flex; gap: .5rem; flex-wrap: wrap; }
+.photoacts { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.photoacts form.inline { display: contents; }
+.sheet + .sheet { margin-top: 1.1rem; }
+.sheethead { margin: 0 0 .4rem; font-size: .85rem; font-weight: 600; color: var(--muted); }
+#sheets > .photoacts { margin-top: .8rem; }
+.photoacts input.sr:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
 .photoform { display: flex; gap: .5rem; margin-top: .8rem; flex-wrap: wrap; }
 .photoform input { flex: 1 1 200px; }
 .danger { margin-top: 1.5rem; color: var(--muted); }

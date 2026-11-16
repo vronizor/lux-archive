@@ -6,8 +6,8 @@
 {% if gap %}{{ row(['Shift', '←', '→'], 'Previous / next roll ' ~ gap.label) }}{% endif %}
 {{ row(['1', '2', '3'], 'Tick or untick a stage') }}
 {{ row(['4'], 'Jump to scan picks') }}
-{{ row(['v'], 'Contact sheet: positive / negative') }}
-{{ row(['p'], 'Upload a contact sheet photo') }}
+{{ row(['v'], 'Contact sheets: positive / negative') }}
+{{ row(['p'], 'Add a contact sheet photo') }}
 {{ row(['e'], 'Edit details') }}
 {{ row(['Ctrl', 'Enter'], 'Save details') }}
 {{ row(['↑', '↓'], 'In a year field: one year later / earlier') }}
@@ -46,26 +46,42 @@
 <p class="muted small">Tap a stage to tick or untick it. Scans are set below, from the contact sheet.</p>
 
 <div class="grid2">
-  <section class="card">
-    <h2>Contact sheet</h2>
-    {% if r.photo %}
+  <section class="card" id="sheets">
+    <h2>Contact sheet{{ 's' if sheets|length > 1 }}{% if sheets|length > 1 %} <span class="muted">· {{ sheets|length }}</span>{% endif %}</h2>
+    {% if sheets %}
     {% set v = r.updated_at|urlencode %}
-    <figure class="sleeve">
-      <img id="sleeveimg" src="/photos/{{ r.id }}_pos.jpg?v={{ v }}" data-pos="/photos/{{ r.id }}_pos.jpg?v={{ v }}" data-neg="/photos/{{ r.photo }}?v={{ v }}" alt="Contact sheet of {{ r.id }}">
-    </figure>
+    {% for s in sheets %}
+    <div class="sheet">
+      {% if sheets|length > 1 %}<h3 class="sheethead">Sheet {{ s.n }}</h3>{% endif %}
+      <figure class="sleeve">
+        <img class="sleeveimg" src="/photos/{{ r.id }}-{{ s.n }}_pos.jpg?v={{ v }}" data-pos="/photos/{{ r.id }}-{{ s.n }}_pos.jpg?v={{ v }}" data-neg="/photos/{{ r.id }}-{{ s.n }}.jpg?v={{ v }}" alt="Contact sheet {{ s.n }} of {{ r.id }}">
+      </figure>
+      <div class="photoacts">
+        <a class="btn small" href="/rolls/{{ r.id }}/contact-{{ s.n }}.jpg" download>Download {{ r.id }}_contact-{{ s.n }}.jpg</a>
+        <a class="btn small ghost" href="/rolls/{{ r.id }}/contact-{{ s.n }}.jpg?negative=1" download>Negative{{ '' if s.has_original else ' (preview only)' }}</a>
+        <form method="post" action="/rolls/{{ r.id }}/photo" enctype="multipart/form-data" class="inline">
+          <input type="hidden" name="sheet" value="{{ s.n }}">
+          <input type="file" id="replace-{{ s.n }}" name="photo" accept="image/*" capture="environment" class="sr" data-autosubmit>
+          <label for="replace-{{ s.n }}" class="btn small ghost">Replace</label>
+        </form>
+        <form method="post" action="/rolls/{{ r.id }}/sheets/{{ s.n }}/delete" class="inline" onsubmit="return confirm('Remove sheet {{ s.n }} of {{ r.id }}?')">
+          <button class="btn small ghost">Remove</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
     <div class="photoacts">
       <button type="button" class="btn small" id="flip" aria-pressed="false">Show negative</button>
-      <a class="btn small" href="/rolls/{{ r.id }}/contact.jpg" download>Download {{ r.id }}_contact.jpg</a>
-      <a class="btn small ghost" href="/rolls/{{ r.id }}/contact.jpg?negative=1" download>Negative{{ '' if has_original else ' (preview only)' }}</a>
     </div>
-    <p class="muted small">The download is the full-size positive, ready to drop into this roll's digiKam folder.{% if r.process == 'slide' %} Slide film: no inversion.{% elif not r.process %} Film type not set, converted as colour.{% endif %}</p>
+    <p class="muted small">Downloads are full-size positives, ready to drop into this roll's digiKam folder.{% if r.process == 'slide' %} Slide film: no inversion.{% elif not r.process %} Film type not set, converted as colour.{% endif %}</p>
     {% else %}
     <p class="muted">No contact sheet yet. Lay the sleeve on the light table and shoot it straight on, filling the frame.</p>
     {% endif %}
     <form method="post" action="/rolls/{{ r.id }}/photo" enctype="multipart/form-data" class="photoform">
-      <input type="file" id="photo-in" name="photo" accept="image/*" capture="environment" required aria-label="Contact sheet photo">
-      <button class="btn small primary">{{ 'Replace' if r.photo else 'Upload' }}</button>
+      <input type="file" id="photo-in" name="photo" accept="image/*" capture="environment" required aria-label="{{ 'Another contact sheet photo' if sheets else 'Contact sheet photo' }}">
+      <button class="btn small primary">{{ 'Add a sheet' if sheets else 'Upload' }}</button>
     </form>
+    {% if sheets %}<p class="muted small">Roll spread over two sleeves? Add a sheet per sleeve.</p>{% endif %}
   </section>
 
   <section class="card" id="scans">

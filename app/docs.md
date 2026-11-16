@@ -7,8 +7,8 @@ Habits, conventions and rough processes. Items marked *proposed* are defaults to
 ## One roll, start to finish
 
 1. **File.** The roll gets the next free number, goes into the next sleeve of the current binder, and gets a season and a few words of contents.
-2. **Contact sheet.** Photograph the sleeve on the light table and upload it on the roll's page. Every roll gets one, including rolls a lab already scanned. It's how you check the lab didn't skip frames.
-3. **Link.** Download `V012_contact.jpg` from the roll page, put it in the roll's digiKam folder, tick *Linked*. From then on the roll exists in digiKam even if nothing else is ever scanned.
+2. **Contact sheet.** Photograph the sleeve on the light table and upload it on the roll's page. Every roll gets one, including rolls a lab already scanned. A roll spread over two sleeves gets one sheet per sleeve: *Add a sheet* on the roll page. It's how you check the lab didn't skip frames.
+3. **Link.** Download `V012_contact-1.jpg` (and `-2`, … if the roll has more sheets) from the roll page, put it in the roll's digiKam folder, tick *Linked*. From then on the roll exists in digiKam even if nothing else is ever scanned.
 4. **Review.** Look at the contact sheet and write down the frames worth scanning, or `none`, or `all`.
 5. **Scan.** Whenever, in any order, a few frames at a time. Each scan goes straight into the roll's digiKam folder; tap the frame on the roll page.
 
@@ -37,7 +37,7 @@ Dates fill themselves: loading sets the start season, unloading the end. Rolls t
 | Dates | Season + year. Winter YYYY = Dec YYYY – Feb YYYY+1. Tick *Year TBC* when the year is a guess. |
 | Where | Binder + sleeve number, only once the roll is filed: unticking *Filed* clears it, and typing a binder on an unfiled roll ticks *Filed*. One roll per sleeve. A roll cut into short strips takes two consecutive sleeves (*Takes 2 sleeves*), shown as `B2/88–89`; keep both in the same binder. |
 | Frame numbers | As printed on the film edge: `00`, `0`, `1` … `36`. Half frames get an `A`: `14A`. Never the scan order. |
-| Contact sheet file | `V012_contact.jpg` (positive). The negative is `V012_contact_neg.jpg` if you ever want it. |
+| Contact sheet file | `V012_contact-1.jpg` (positive), always numbered, `-2` for a second sheet. The negative is `V012_contact-1_neg.jpg` if you ever want it. Removing a sheet doesn't renumber the others. |
 | Scan files | Frame number exactly as printed, never padded: `V012_00.jpg`, `V012_0.jpg`, `V012_4.jpg`, `V012_14A.jpg`. Padding would turn frame 0 into `00` and collide with the real frame 00. digiKam's natural sort (Settings → Miscellaneous → Behavior) puts `_4` before `_14`. A re-scan of the same frame: `V012_14_v2.jpg` *(proposed)*. |
 | digiKam folders | One folder per roll, named after the roll ID: `V012/` *(proposed)*. |
 | Lab scans | Put the lab's folder name in *Lab scan folder*. When linking, rename the files to `V012_FF` by matching them against the contact sheet, then set scans to `all`. |
