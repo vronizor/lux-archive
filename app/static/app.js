@@ -70,6 +70,28 @@
     return res.json();
   };
 
+  const disarm = (btn) => {
+    clearTimeout(btn.disarmTimer);
+    if (!btn.dataset.armed) return;
+    delete btn.dataset.armed;
+    btn.classList.remove("armed");
+    const label = btn.querySelector(".state");
+    if (label) label.textContent = btn.dataset.was;
+    btn.title = btn.dataset.tip;
+  };
+  const arm = (btn) => {
+    btn.dataset.armed = "1";
+    btn.classList.add("armed");
+    btn.dataset.tip = btn.title;
+    btn.title = "Once more to untick";
+    const label = btn.querySelector(".state");
+    if (label) {
+      btn.dataset.was = label.textContent;
+      label.textContent = "once more to untick";
+    }
+    btn.disarmTimer = setTimeout(() => disarm(btn), 3000);
+  };
+
   document.addEventListener("click", async (ev) => {
     const btn = ev.target.closest("[data-roll] [data-stage]");
     if (!btn) return;
@@ -77,6 +99,8 @@
     const stage = btn.dataset.stage;
     const target = nextState(stage, btn.dataset.state);
     if (stage === "picked" && (!target || btn.closest(".stagebar"))) return toScans(id);
+    if (target === "todo" && !btn.dataset.armed) return arm(btn);
+    disarm(btn);
     btn.classList.add("busy");
     try {
       paint(await post(`/api/rolls/${id}/stage`, { stage, value: asValue(target) }));
@@ -537,7 +561,8 @@
         c?.focus();
         c?.setSelectionRange(c.value.length, c.value.length);
       },
-      ...Object.fromEntries([1, 2, 3, 4].map((n) => [n, () => document.querySelectorAll(".stagebar [data-stage]")[n - 1]?.click()])),
+      L: () => document.querySelector(".stagebar [data-stage=linked]")?.click(),
+      s: () => document.querySelector(".stagebar [data-stage=picked]")?.click(),
       v: () => document.getElementById("flip")?.click(),
       z: () => loupe?.toggle(),
       x: () => loupe?.zoom(-1),

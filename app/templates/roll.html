@@ -4,8 +4,8 @@
 {% block keys %}
 {{ row(['←', '→'], 'Previous / next roll') }}
 {% if gap %}{{ row(['Shift', '←', '→'], 'Previous / next roll ' ~ gap.label) }}{% endif %}
-{{ row(['1', '2', '3'], 'Tick or untick a stage') }}
-{{ row(['4'], 'Jump to scan picks') }}
+{{ row(['Shift', 'L'], 'Tick Linked (once more within 3 s to untick)') }}
+{{ row(['s'], 'Jump to scan picks') }}
 {{ row(['v'], 'Contact sheets: positive / negative') }}
 {{ row(['z'], 'Loupe on / off (Esc puts it down)') }}
 {{ row(['x', 'c'], 'Loupe: zoom out / in on this sheet') }}
@@ -46,7 +46,7 @@
   </button>
   {% endfor %}
 </section>
-<p class="muted small">Tap a stage to tick or untick it. Scans are set below, from the contact sheet.</p>
+<p class="muted small">Tap a stage to tick it; unticking takes a second tap. Scans are set below, from the contact sheet.</p>
 
 <div class="grid2">
   <section class="card" id="sheets">
