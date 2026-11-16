@@ -377,7 +377,7 @@
       else if ((k === "a" || k === "A") && /^\d{1,2}$/.test(buffer)) buffer += "A";
       else if (k === "Backspace" && buffer) buffer = buffer.slice(0, -1);
       else if (k === "Escape" && buffer) buffer = "";
-      else if (k === "Enter" && buffer) {
+      else if ((k === "Enter" || k === "Tab") && buffer) {
         const f = buffer;
         buffer = "";
         showHud("…");
