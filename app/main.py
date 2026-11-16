@@ -90,8 +90,9 @@ def startup():
     with db.connect() as conn:
         row = conn.execute("SELECT value FROM meta WHERE key='positive_version'").fetchone()
         if not row or row["value"] != contact.VERSION:
-            for path in db.PHOTO_DIR.glob("*_pos.jpg"):
-                path.unlink(missing_ok=True)
+            for suffix in db.DERIVED:
+                for path in db.PHOTO_DIR.glob(f"*{suffix}.jpg"):
+                    path.unlink(missing_ok=True)
             conn.execute(
                 "INSERT INTO meta(key, value) VALUES('positive_version', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                 (contact.VERSION,),
@@ -415,10 +416,8 @@ def roll_page(request: Request, roll_id: str, saved: int = 0, error: str = "", c
     sheets = []
     for n in db.sheet_nums(r["photo"]):
         paths = db.sheet_paths(r["id"], n)
-        if not paths["preview"].exists():
-            continue
-        refresh_sheet(r["id"], n, r["process"])
-        sheets.append({"n": n, "has_original": paths["original"].exists()})
+        if paths["preview"].exists():
+            sheets.append({"n": n, "has_original": paths["original"].exists()})
     nav = conn.execute(
         "SELECT (SELECT id FROM rolls WHERE num<? ORDER BY num DESC LIMIT 1) AS prev, "
         "(SELECT id FROM rolls WHERE num>? ORDER BY num LIMIT 1) AS next",
@@ -433,9 +432,14 @@ def roll_page(request: Request, roll_id: str, saved: int = 0, error: str = "", c
                 (label, r["num"], r["num"]),
             ).fetchone()
             break
+    prefetch = []
+    for rid in (nav["next"], nav["prev"]):
+        row = rid and conn.execute("SELECT id, photo, updated_at FROM rolls WHERE id=?", (rid,)).fetchone()
+        if row:
+            prefetch += [(row["id"], n, view_version(row)) for n in db.sheet_nums(row["photo"])]
     return render(
         request, "roll.html", r=r, d=dict(r), nav=nav, gap=gap, saved=saved, error=error,
-        sheets=sheets, missing=db.missing_sheets(r),
+        sheets=sheets, missing=db.missing_sheets(r), ver=view_version(r), prefetch=prefetch,
         stocks=distinct(conn, "stock"), cameras=distinct(conn, "camera"), binders=distinct(conn, "binder"),
     )
 
@@ -479,10 +483,29 @@ def delete_roll(roll_id: str, conn=Depends(get_db)):
     return RedirectResponse("/rolls", 303)
 
 
+VIEW_MAX = 2000
+
+
+def write_atomic(path, data):
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    tmp.write_bytes(data)
+    tmp.replace(path)
+
+
+def shrink(img):
+    img = img.copy()
+    img.thumbnail((VIEW_MAX, VIEW_MAX), Image.LANCZOS)
+    return img
+
+
 def write_positive(roll_id, n, process):
     paths = db.sheet_paths(roll_id, n)
     with Image.open(paths["preview"]) as img:
-        paths["positive"].write_bytes(contact.to_jpeg(contact.positive(img, process), 85))
+        img.load()
+        pos = contact.positive(img, process)
+        write_atomic(paths["positive"], contact.to_jpeg(pos, 85))
+        write_atomic(paths["view"], contact.to_jpeg(shrink(pos), 82))
+        write_atomic(paths["vneg"], contact.to_jpeg(shrink(img.convert("RGB")), 82))
 
 
 def preview_edge(original):
@@ -497,7 +520,7 @@ def write_preview(roll_id, n):
         preview = ImageOps.exif_transpose(img).convert("RGB")
     if PREVIEW_MAX:
         preview.thumbnail((PREVIEW_MAX, PREVIEW_MAX), Image.LANCZOS)
-    paths["preview"].write_bytes(contact.to_jpeg(preview, 85))
+    write_atomic(paths["preview"], contact.to_jpeg(preview, 85))
 
 
 def refresh_sheet(roll_id, n, process):
@@ -507,8 +530,9 @@ def refresh_sheet(roll_id, n, process):
             stale = abs(max(img.size) - preview_edge(paths["original"])) > 2
         if stale:
             write_preview(roll_id, n)
-            paths["positive"].unlink(missing_ok=True)
-    if not paths["positive"].exists():
+            for k in ("positive", "view", "vneg"):
+                paths[k].unlink(missing_ok=True)
+    if not all(paths[k].exists() for k in ("positive", "view", "vneg")):
         write_positive(roll_id, n, process)
 
 
@@ -539,6 +563,21 @@ def remove_sheet(conn, roll_id, n):
         path.unlink(missing_ok=True)
     r = conn.execute("SELECT photo FROM rolls WHERE id=?", (roll_id,)).fetchone()
     db.set_sheets(conn, roll_id, set(db.sheet_nums(r["photo"])) - {n})
+
+
+def view_version(r):
+    return f"{r['updated_at']}.{contact.VERSION}.{PREVIEW_MAX}"
+
+
+@app.get("/rolls/{roll_id}/view-{n}.jpg")
+def sheet_view(roll_id: str, n: int, neg: int = 0, v: str = "", conn=Depends(get_db)):
+    r = fetch_roll(conn, roll_id)
+    paths = db.sheet_paths(r["id"], n)
+    if n not in db.sheet_nums(r["photo"]) or not paths["preview"].exists():
+        raise HTTPException(404, "No such contact sheet")
+    refresh_sheet(r["id"], n, r["process"])
+    cache = "private, max-age=31536000, immutable" if v == view_version(r) else "no-cache"
+    return FileResponse(paths["vneg" if neg else "view"], headers={"Cache-Control": cache})
 
 
 @app.get("/rolls/{roll_id}/contact-{n}.jpg")

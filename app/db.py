@@ -105,6 +105,9 @@ def sheet_nums(photo):
     return sorted(nums)
 
 
+DERIVED = ("_pos", "_view", "_vneg")
+
+
 def sheet_name(roll_id, n):
     return f"{roll_id}-{n}.jpg"
 
@@ -114,6 +117,8 @@ def sheet_paths(roll_id, n):
         "original": ORIG_DIR / sheet_name(roll_id, n),
         "preview": PHOTO_DIR / sheet_name(roll_id, n),
         "positive": PHOTO_DIR / f"{roll_id}-{n}_pos.jpg",
+        "view": PHOTO_DIR / f"{roll_id}-{n}_view.jpg",
+        "vneg": PHOTO_DIR / f"{roll_id}-{n}_vneg.jpg",
     }
 
 

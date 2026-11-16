@@ -343,11 +343,38 @@
     const picksField = document.getElementById("picks");
     const pickForm = document.getElementById("pickform");
     let buffer = "", msgTimer = null;
+    const full = {};
+    const fullUrl = (el) => (el.getAttribute("src") === el.dataset.neg ? el.dataset.fullNeg : el.dataset.fullPos);
+    const source = (el) => {
+      const url = fullUrl(el);
+      if (!url) return el.currentSrc || el.src;
+      if (!full[url]) {
+        full[url] = "loading";
+        const pre = new Image();
+        pre.onload = () => {
+          full[url] = "ready";
+          if (hud.msg.dataset.loading === url) {
+            hud.msg.textContent = "";
+            delete hud.msg.dataset.loading;
+          }
+          place();
+        };
+        pre.onerror = () => (full[url] = "failed");
+        pre.src = url;
+      }
+      if (full[url] === "ready") return url;
+      if (full[url] === "loading" && !hud.msg.dataset.loading) {
+        hud.msg.dataset.loading = url;
+        hud.msg.textContent = "loading full size…";
+      }
+      return el.currentSrc || el.src;
+    };
     const showHud = (msg) => {
       hud.buf.textContent = buffer ? `${buffer}▏` : "#";
       const picks = picksField?.value.trim();
       hud.picks.textContent = picks ? `Picks: ${picks}` : "Type a frame number, Enter to pick";
       if (msg !== undefined) {
+        delete hud.msg.dataset.loading;
         hud.msg.textContent = msg;
         clearTimeout(msgTimer);
         msgTimer = setTimeout(() => (hud.msg.textContent = ""), 2500);
@@ -432,7 +459,7 @@
       const keep = (v, size, max) => Math.min(max - size / 2 - 4, Math.max(size / 2 + 4, v));
       lens.style.left = `${keep(x, w, innerWidth)}px`;
       lens.style.top = `${keep(touch ? y - h * 0.75 : y, h, innerHeight)}px`;
-      lens.style.backgroundImage = `url("${img.currentSrc || img.src}")`;
+      lens.style.backgroundImage = `url("${source(img)}")`;
       lens.style.backgroundSize = `${r.width * p}px ${r.height * p}px`;
       lens.style.backgroundPosition = `${w / 2 - (x - r.left) * p}px ${h / 2 - (y - r.top) * p}px`;
     };

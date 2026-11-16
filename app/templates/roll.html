@@ -52,12 +52,15 @@
   <section class="card" id="sheets">
     <h2>Contact sheet{{ 's' if sheets|length > 1 }}{% if sheets|length > 1 %} <span class="muted">· {{ sheets|length }}</span>{% endif %}</h2>
     {% if sheets %}
-    {% set v = r.updated_at|urlencode %}
+    {% set v = ver|urlencode %}
     {% for s in sheets %}
     <div class="sheet">
       {% if sheets|length > 1 %}<h3 class="sheethead">Sheet {{ s.n }}</h3>{% endif %}
       <figure class="sleeve">
-        <img class="sleeveimg" data-sheet="{{ r.id }}-{{ s.n }}" src="/photos/{{ r.id }}-{{ s.n }}_pos.jpg?v={{ v }}" data-pos="/photos/{{ r.id }}-{{ s.n }}_pos.jpg?v={{ v }}" data-neg="/photos/{{ r.id }}-{{ s.n }}.jpg?v={{ v }}" alt="Contact sheet {{ s.n }} of {{ r.id }}">
+        <img class="sleeveimg" data-sheet="{{ r.id }}-{{ s.n }}" src="/rolls/{{ r.id }}/view-{{ s.n }}.jpg?v={{ v }}"
+          data-pos="/rolls/{{ r.id }}/view-{{ s.n }}.jpg?v={{ v }}" data-neg="/rolls/{{ r.id }}/view-{{ s.n }}.jpg?neg=1&amp;v={{ v }}"
+          data-full-pos="/photos/{{ r.id }}-{{ s.n }}_pos.jpg?v={{ v }}" data-full-neg="/photos/{{ r.id }}-{{ s.n }}.jpg?v={{ v }}"
+          alt="Contact sheet {{ s.n }} of {{ r.id }}">
       </figure>
       <div class="photoacts">
         <a class="btn small" href="/rolls/{{ r.id }}/contact-{{ s.n }}.jpg" download>Download {{ r.id }}_contact-{{ s.n }}.jpg</a>
@@ -142,4 +145,5 @@
     <button class="btn small danger-btn">Delete this roll</button>
   </form>
 </details>
-{% endblock %}
+{% for pid, pn, pv in prefetch %}<link rel="prefetch" as="image" href="/rolls/{{ pid }}/view-{{ pn }}.jpg?v={{ pv|urlencode }}">
+{% endfor %}{% endblock %}

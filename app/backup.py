@@ -30,7 +30,7 @@ def export(target):
             w.writerow(list(e))
     keep = set()
     for src in db.PHOTO_DIR.glob("*.jpg"):
-        if src.stem.endswith("_pos"):
+        if src.stem.endswith(db.DERIVED):
             continue
         keep.add(src.name)
         dst = photos / src.name
