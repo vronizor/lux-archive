@@ -7,6 +7,7 @@
 {{ row(['1', '2', '3'], 'Tick or untick a stage') }}
 {{ row(['4'], 'Jump to scan picks') }}
 {{ row(['v'], 'Contact sheets: positive / negative') }}
+{{ row(['z'], 'Loupe on / off (scroll over a sheet to change power, Esc to put it down)') }}
 {{ row(['p'], 'Add a contact sheet photo') }}
 {{ row(['e'], 'Edit details') }}
 {{ row(['Ctrl', 'Enter'], 'Save details') }}
@@ -72,6 +73,7 @@
     {% endfor %}
     <div class="photoacts">
       <button type="button" class="btn small" id="flip" aria-pressed="false">Show negative</button>
+      <button type="button" class="btn small" id="loupe" aria-pressed="false" title="Magnifier: scroll over a sheet to change power">Loupe</button>
     </div>
     <p class="muted small">Downloads are full-size positives, ready to drop into this roll's digiKam folder.{% if r.process == 'slide' %} Slide film: no inversion.{% elif not r.process %} Film type not set, converted as colour.{% endif %}</p>
     {% else %}

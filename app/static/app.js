@@ -305,6 +305,74 @@
   const typing = (el) => el?.isContentEditable || (/^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName) && !/^(checkbox|radio|button|submit|file)$/.test(el.type));
   const go = (url) => (location.href = url);
 
+  const loupe = (() => {
+    const btn = document.getElementById("loupe");
+    if (!btn) return null;
+    const lens = document.createElement("div");
+    lens.className = "loupe";
+    lens.hidden = true;
+    document.body.append(lens);
+    let on = false, power = 4, img = null, last = null;
+    try {
+      on = sessionStorage.getItem("lux-loupe") === "1";
+      power = Math.min(8, Math.max(2, parseInt(sessionStorage.getItem("lux-loupe-power"), 10) || 4));
+    } catch (e) {}
+    const save = () => {
+      try {
+        sessionStorage.setItem("lux-loupe", on ? "1" : "0");
+        sessionStorage.setItem("lux-loupe-power", power);
+      } catch (e) {}
+    };
+    const label = () => {
+      btn.textContent = on ? `Loupe ×${power}` : "Loupe";
+      btn.setAttribute("aria-pressed", on);
+      document.body.classList.toggle("loupe-on", on);
+      if (!on) lens.hidden = true;
+    };
+    const place = () => {
+      if (!on || !img || !last) return;
+      const r = img.getBoundingClientRect();
+      const { x, y, touch } = last;
+      if (x < r.left || x > r.right || y < r.top || y > r.bottom) return (lens.hidden = true);
+      lens.hidden = false;
+      const size = lens.offsetWidth;
+      lens.style.left = `${x}px`;
+      lens.style.top = `${touch ? y - size * 0.7 : y}px`;
+      lens.style.backgroundImage = `url("${img.currentSrc || img.src}")`;
+      lens.style.backgroundSize = `${r.width * power}px ${r.height * power}px`;
+      lens.style.backgroundPosition = `${size / 2 - (x - r.left) * power}px ${size / 2 - (y - r.top) * power}px`;
+    };
+    const track = (ev) => {
+      img = ev.currentTarget;
+      last = { x: ev.clientX, y: ev.clientY, touch: ev.pointerType === "touch" };
+      place();
+    };
+    const toggle = () => {
+      on = !on;
+      save();
+      label();
+      place();
+    };
+    document.querySelectorAll(".sleeveimg").forEach((el) => {
+      el.addEventListener("pointermove", track);
+      el.addEventListener("pointerdown", track);
+      el.addEventListener("pointerleave", () => (lens.hidden = true));
+      el.addEventListener("pointerup", (ev) => ev.pointerType === "touch" && (lens.hidden = true));
+      el.addEventListener("wheel", (ev) => {
+        if (!on) return;
+        ev.preventDefault();
+        power = Math.min(8, Math.max(2, power + (ev.deltaY < 0 ? 1 : -1)));
+        save();
+        label();
+        track(ev);
+      }, { passive: false });
+    });
+    window.addEventListener("scroll", () => (lens.hidden = true), { passive: true });
+    btn.addEventListener("click", toggle);
+    label();
+    return { toggle, refresh: place, isOn: () => on };
+  })();
+
   document.addEventListener("keydown", (ev) => {
     if (ev.isComposing || ev.defaultPrevented) return;
     const t = ev.target;
@@ -384,6 +452,8 @@
       },
       ...Object.fromEntries([1, 2, 3, 4].map((n) => [n, () => document.querySelectorAll(".stagebar [data-stage]")[n - 1]?.click()])),
       v: () => document.getElementById("flip")?.click(),
+      z: () => loupe?.toggle(),
+      Escape: loupe?.isOn() ? () => loupe.toggle() : null,
       p: () => { photoByKey = true; photoIn?.click(); },
     }[k]);
     if (!act) return;
@@ -395,6 +465,7 @@
   flip?.addEventListener("click", () => {
     const neg = flip.getAttribute("aria-pressed") !== "true";
     document.querySelectorAll(".sleeveimg").forEach((img) => (img.src = neg ? img.dataset.neg : img.dataset.pos));
+    document.querySelector(".sleeveimg")?.addEventListener("load", () => loupe?.refresh(), { once: true });
     flip.setAttribute("aria-pressed", neg);
     flip.textContent = neg ? "Show positive" : "Show negative";
   });
