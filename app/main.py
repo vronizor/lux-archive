@@ -87,6 +87,15 @@ GAPS = [
 @app.on_event("startup")
 def startup():
     db.init()
+    with db.connect() as conn:
+        row = conn.execute("SELECT value FROM meta WHERE key='positive_version'").fetchone()
+        if not row or row["value"] != contact.VERSION:
+            for path in db.PHOTO_DIR.glob("*_pos.jpg"):
+                path.unlink(missing_ok=True)
+            conn.execute(
+                "INSERT INTO meta(key, value) VALUES('positive_version', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (contact.VERSION,),
+            )
 
 
 def shooting():
