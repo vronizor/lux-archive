@@ -382,14 +382,16 @@
       el.addEventListener("pointerdown", track);
       el.addEventListener("pointerleave", () => (lens.hidden = true));
       el.addEventListener("pointerup", (ev) => ev.pointerType === "touch" && (lens.hidden = true));
-      el.addEventListener("wheel", (ev) => {
-        if (!on) return;
-        ev.preventDefault();
-        track(ev);
-        zoom(ev.deltaY < 0 ? 1 : -1);
-      }, { passive: false });
     });
-    window.addEventListener("scroll", () => (lens.hidden = true), { passive: true });
+    window.addEventListener("scroll", () => {
+      const under = on && last && !last.touch && document.elementFromPoint(last.x, last.y)?.closest(".sleeveimg");
+      if (!under) return (lens.hidden = true);
+      if (img !== under) {
+        img = under;
+        label();
+      }
+      place();
+    }, { passive: true });
     btn.addEventListener("click", toggle);
     zoomBox?.querySelectorAll("[data-zoom]").forEach((b) => b.addEventListener("click", () => zoom(+b.dataset.zoom)));
     label();
@@ -476,9 +478,8 @@
       ...Object.fromEntries([1, 2, 3, 4].map((n) => [n, () => document.querySelectorAll(".stagebar [data-stage]")[n - 1]?.click()])),
       v: () => document.getElementById("flip")?.click(),
       z: () => loupe?.toggle(),
-      "+": () => loupe?.zoom(1),
-      "=": () => loupe?.zoom(1),
-      "-": () => loupe?.zoom(-1),
+      x: () => loupe?.zoom(-1),
+      c: () => loupe?.zoom(1),
       Escape: loupe?.isOn() ? () => loupe.toggle() : null,
       p: () => { photoByKey = true; photoIn?.click(); },
     }[k]);

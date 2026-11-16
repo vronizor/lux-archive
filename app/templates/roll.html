@@ -8,7 +8,7 @@
 {{ row(['4'], 'Jump to scan picks') }}
 {{ row(['v'], 'Contact sheets: positive / negative') }}
 {{ row(['z'], 'Loupe on / off (Esc puts it down)') }}
-{{ row(['-', '+'], 'Loupe zoom for this sheet (or scroll over it)') }}
+{{ row(['x', 'c'], 'Loupe: zoom out / in on this sheet') }}
 {{ row(['p'], 'Add a contact sheet photo') }}
 {{ row(['e'], 'Edit details') }}
 {{ row(['Ctrl', 'Enter'], 'Save details') }}
@@ -76,8 +76,8 @@
       <button type="button" class="btn small" id="flip" aria-pressed="false">Show negative</button>
       <button type="button" class="btn small" id="loupe" aria-pressed="false" title="Magnifier">Loupe</button>
       <span class="loupezoom" id="loupezoom" hidden>
-        <button type="button" class="btn small" data-zoom="-1" aria-label="Zoom out">−</button>
-        <button type="button" class="btn small" data-zoom="1" aria-label="Zoom in">+</button>
+        <button type="button" class="btn small" data-zoom="-1" aria-label="Zoom out (x)" title="Zoom out (x)">−</button>
+        <button type="button" class="btn small" data-zoom="1" aria-label="Zoom in (c)" title="Zoom in (c)">+</button>
       </span>
     </div>
     <p class="muted small">Downloads are full-size positives, ready to drop into this roll's digiKam folder.{% if r.process == 'slide' %} Slide film: no inversion.{% elif not r.process %} Film type not set, converted as colour.{% endif %}</p>
