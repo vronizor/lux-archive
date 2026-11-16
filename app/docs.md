@@ -7,7 +7,7 @@ Habits, conventions and rough processes. Items marked *proposed* are defaults to
 ## One roll, start to finish
 
 1. **File.** The roll gets the next free number, goes into the next sleeve of the current binder, and gets a season and a few words of contents.
-2. **Contact sheet.** Photograph the sleeve on the light table and upload it on the roll's page. Every roll gets one, including rolls a lab already scanned. A roll spread over two sleeves gets one sheet per sleeve: *Add a sheet* on the roll page. It's how you check the lab didn't skip frames.
+2. **Contact sheet.** Photograph the sleeve on the light table and upload it on the roll's page. Every roll gets one, including rolls a lab already scanned. A roll spread over two sleeves gets one sheet per sleeve: *Add a sheet* on the roll page. For a roll marked *Takes 2 sleeves*, the stage only ticks itself once both sheets are in; until then it shows *sheet missing*, and the index has a *Missing a sheet* filter. It's how you check the lab didn't skip frames.
 3. **Link.** Download `V012_contact-1.jpg` (and `-2`, … if the roll has more sheets) from the roll page, put it in the roll's digiKam folder, tick *Linked*. From then on the roll exists in digiKam even if nothing else is ever scanned.
 4. **Review.** Look at the contact sheet and write down the frames worth scanning, or `none`, or `all`.
 5. **Scan.** Whenever, in any order, a few frames at a time. Each scan goes straight into the roll's digiKam folder; tap the frame on the roll page.

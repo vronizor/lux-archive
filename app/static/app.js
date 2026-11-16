@@ -18,7 +18,7 @@
   dark.addEventListener?.("change", paintLamp);
   paintLamp();
 
-  const LABELS = { done: "done", todo: "to do" };
+  const LABELS = { done: "done", todo: "to do", part: "sheet missing" };
   const nextState = (stage, state) => {
     if (stage === "picked") return { todo: "skip", skip: "todo" }[state];
     return state === "done" ? "todo" : "done";
@@ -38,7 +38,7 @@
     document.querySelectorAll(`[data-roll="${data.id}"]`).forEach((box) => {
       box.querySelectorAll("[data-stage]").forEach((btn) => {
         const st = data.stages[btn.dataset.stage];
-        btn.classList.remove("done", "todo", "skip", "busy");
+        btn.classList.remove("done", "todo", "skip", "part", "busy");
         btn.classList.add(st);
         btn.dataset.state = st;
         const label = btn.querySelector(".state");

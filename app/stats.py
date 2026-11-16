@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta
 from html import escape
 
 from . import frames
-from .db import STAGES, is_done
+from .db import STAGES, is_done, missing_sheets
 
 SESSION_GAP = timedelta(minutes=45)
 STAGE_LABEL = {"filed": "Filed", "photographed": "Contact sheet", "linked": "Linked", "picked": "Scans"}
@@ -16,6 +16,7 @@ def counts(rolls):
     out["total"] = len(rolls)
     out["done"] = sum(1 for r in rolls if is_done(r))
     out["need_photo"] = sum(1 for r in rolls if not r["photographed_at"])
+    out["need_sheet"] = sum(1 for r in rolls if missing_sheets(r))
     out["need_link"] = sum(1 for r in rolls if r["photographed_at"] and not r["linked_at"])
     out["need_review"] = sum(1 for r in rolls if r["photographed_at"] and not r["picked_at"])
     out["tbc"] = sum(1 for r in rolls if r["date_tbc"])

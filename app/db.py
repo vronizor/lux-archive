@@ -207,9 +207,16 @@ def is_done(r):
     return all(r[f"{s}_at"] for s in STAGES)
 
 
+def missing_sheets(r):
+    n = len(sheet_nums(r["photo"]))
+    return max((r["sleeves"] or 1) - n, 0) if n else 0
+
+
 def stage_state(r, stage):
     if stage == "picked":
         return frames.state(r["picks"], r["scans"])
+    if stage == "photographed" and not r["photographed_at"] and missing_sheets(r):
+        return "part"
     return "done" if r[f"{stage}_at"] else "todo"
 
 

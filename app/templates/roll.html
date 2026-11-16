@@ -39,7 +39,7 @@
   <button type="button" class="stage {{ st }} s-{{ s }}" data-stage="{{ s }}" data-state="{{ st }}">
     <span class="num">{{ loop.index }}</span>
     <span class="name">{{ stage_label[s] }}</span>
-    <span class="state">{{ scan_summary(r.picks, r.scans) if s == 'picked' else {'done': 'done', 'todo': 'to do'}[st] }}</span>
+    <span class="state">{{ scan_summary(r.picks, r.scans) if s == 'picked' else {'done': 'done', 'todo': 'to do', 'part': 'sheet missing'}[st] }}</span>
   </button>
   {% endfor %}
 </section>
@@ -81,7 +81,13 @@
       <input type="file" id="photo-in" name="photo" accept="image/*" capture="environment" required aria-label="{{ 'Another contact sheet photo' if sheets else 'Contact sheet photo' }}">
       <button class="btn small primary">{{ 'Add a sheet' if sheets else 'Upload' }}</button>
     </form>
-    {% if sheets %}<p class="muted small">Roll spread over two sleeves? Add a sheet per sleeve.</p>{% endif %}
+    {% if missing %}
+    <p class="sheetwarn s-photographed" role="status">Takes {{ r.sleeves }} sleeves, {{ sheets|length }} sheet{{ 's' if sheets|length != 1 }} so far: add the {{ 'missing one' if missing == 1 else missing ~ ' missing ones' }}{{ ' to complete this stage' if not r.photographed_at }}.</p>
+    {% elif (r.sleeves or 1) > 1 and not sheets %}
+    <p class="muted small">Takes {{ r.sleeves }} sleeves: one sheet per sleeve.</p>
+    {% elif sheets %}
+    <p class="muted small">Roll spread over two sleeves? Add a sheet per sleeve, and tick “Takes 2 sleeves” below.</p>
+    {% endif %}
   </section>
 
   <section class="card" id="scans">

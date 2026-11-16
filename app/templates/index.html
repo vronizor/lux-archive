@@ -61,8 +61,8 @@
 {% endif %}
 <nav class="pills" aria-label="Filter">
   {% for key, (label, _) in filters.items() %}
-  {% set n = {'all': counts.total, 'todo': counts.total - counts.done, 'need-photo': counts.need_photo, 'need-link': counts.need_link, 'need-review': counts.need_review, 'need-scan': counts.need_scan, 'done': counts.done, 'tbc': counts.tbc}[key] %}
-  <a class="pill {{ 'on' if stage == key }}" href="{{ link(stage=key) }}">{{ label }} <span class="n">{{ n }}</span></a>
+  {% set n = {'all': counts.total, 'todo': counts.total - counts.done, 'need-photo': counts.need_photo, 'need-sheet': counts.need_sheet, 'need-link': counts.need_link, 'need-review': counts.need_review, 'need-scan': counts.need_scan, 'done': counts.done, 'tbc': counts.tbc}[key] %}
+  {% if key != 'need-sheet' or n or stage == key %}<a class="pill {{ 'on' if stage == key }}" href="{{ link(stage=key) }}">{{ label }} <span class="n">{{ n }}</span></a>{% endif %}
   {% endfor %}
 </nav>
 

@@ -59,11 +59,13 @@ EXPORT_COLS = [
     "ei", "lab", "loaded_at", "shot_at", "sent_at", "back_at", "created_at", "updated_at",
 ]
 
+SHEETS_SQL = "(CASE WHEN photo IS NULL OR photo = '' THEN 0 ELSE length(photo) - length(replace(photo, ' ', '')) + 1 END)"
 DONE_SQL = "filed_at IS NOT NULL AND photographed_at IS NOT NULL AND linked_at IS NOT NULL AND picked_at IS NOT NULL"
 FILTERS = {
     "all": ("All", "1=1"),
     "todo": ("Not done", f"{ARCHIVE_SQL} AND NOT ({DONE_SQL})"),
     "need-photo": ("Contact sheet", f"{ARCHIVE_SQL} AND photographed_at IS NULL"),
+    "need-sheet": ("Missing a sheet", f"{SHEETS_SQL} > 0 AND {SHEETS_SQL} < COALESCE(sleeves, 1)"),
     "need-link": ("To link", "photographed_at IS NOT NULL AND linked_at IS NULL"),
     "need-review": ("To review", "photographed_at IS NOT NULL AND picked_at IS NULL"),
     "need-scan": ("To scan", "picks NOT IN ('', 'none') AND scanned_at IS NULL"),
@@ -74,6 +76,7 @@ FILTERS = {
 GAPS = [
     ("not back from the lab", FILTERS["out"][1]),
     ("not filed", f"{ARCHIVE_SQL} AND filed_at IS NULL"),
+    ("missing a sheet", FILTERS["need-sheet"][1]),
     ("without a contact sheet", FILTERS["need-photo"][1]),
     ("not in digiKam", FILTERS["need-link"][1]),
     ("to review", FILTERS["need-review"][1]),
@@ -424,7 +427,7 @@ def roll_page(request: Request, roll_id: str, saved: int = 0, error: str = "", c
             break
     return render(
         request, "roll.html", r=r, d=dict(r), nav=nav, gap=gap, saved=saved, error=error,
-        sheets=sheets,
+        sheets=sheets, missing=db.missing_sheets(r),
         stocks=distinct(conn, "stock"), cameras=distinct(conn, "camera"), binders=distinct(conn, "binder"),
     )
 
@@ -439,6 +442,7 @@ async def update_roll(request: Request, roll_id: str, conn=Depends(get_db)):
     db.log(conn, r["id"], "edit")
     if fields["binder"] and not r["filed_at"]:
         db.set_stage(conn, r["id"], "filed", "done")
+    tick_if_complete(conn, r["id"])
     if fields["process"] != r["process"]:
         for n in db.sheet_nums(r["photo"]):
             write_positive(r["id"], n, fields["process"])
@@ -474,7 +478,7 @@ def write_positive(roll_id, n, process):
 
 
 def save_photo(conn, roll_id, data, sheet=None):
-    r = conn.execute("SELECT photo, process, photographed_at FROM rolls WHERE id=?", (roll_id,)).fetchone()
+    r = conn.execute("SELECT photo, process, photographed_at, sleeves FROM rolls WHERE id=?", (roll_id,)).fetchone()
     nums = db.sheet_nums(r["photo"])
     n = sheet if sheet in nums else max(nums, default=0) + 1
     paths = db.sheet_paths(roll_id, n)
@@ -488,7 +492,12 @@ def save_photo(conn, roll_id, data, sheet=None):
     paths["preview"].write_bytes(contact.to_jpeg(preview, 85))
     write_positive(roll_id, n, r["process"])
     db.set_sheets(conn, roll_id, set(nums) | {n})
-    if not r["photographed_at"]:
+    tick_if_complete(conn, roll_id)
+
+
+def tick_if_complete(conn, roll_id):
+    r = conn.execute("SELECT photo, sleeves, photographed_at FROM rolls WHERE id=?", (roll_id,)).fetchone()
+    if r["photo"] and not r["photographed_at"] and not db.missing_sheets(r):
         db.set_stage(conn, roll_id, "photographed", "done")
 
 
