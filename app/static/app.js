@@ -604,6 +604,7 @@
       const target = document.getElementById(b.dataset.fill);
       target.value = b.dataset.from ? document.getElementById(b.dataset.from).value : b.dataset.value;
       draw();
+      target.focus();
     }));
     draw();
     if (location.hash === "#scans" && !picksIn.value) picksIn.focus();
