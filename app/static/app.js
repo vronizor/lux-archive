@@ -593,10 +593,11 @@
       if (!t || ["none", "nothing", "-", "all", "*"].includes(t)) return [];
       const out = [];
       t.replace(/\s*[-–—]\s*/g, "-").split(/[,;\s]+/).forEach((p) => {
-        const r = p.match(/^(\d{1,2})-(\d{1,2})$/);
+        const r = p.match(/^(\d{1,2})(a?)-(\d{1,2})(a?)$/);
         if (r) {
-          const [a, z] = [+r[1], +r[2]].sort((x, y) => x - y);
-          for (let n = a; n <= z && z - a <= 45; n++) out.push(String(n));
+          if (r[2] !== r[4]) return;
+          const [a, z] = [+r[1], +r[3]].sort((x, y) => x - y);
+          for (let n = a; n <= z && z - a <= 45; n++) out.push(String(n) + (r[2] ? "A" : ""));
         } else if (/^\d{1,2}a?$/.test(p)) {
           out.push(p === "00" ? "00" : String(parseInt(p, 10)) + (p.endsWith("a") ? "A" : ""));
         }
