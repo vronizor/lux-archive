@@ -862,6 +862,9 @@ def import_rows(conn, rows):
                 updates[f"{s}_at"] = val if "T" in val else filed
         if row.get("photographed_skipped") in ("1", "true", "yes"):
             updates.pop("photographed_at", None)
+        for k in ("loaded_at", "shot_at", "sent_at", "back_at"):
+            if row.get(k):
+                updates[k] = row[k]
         if "picks" in row:
             for k in ("picks", "scans", "picked_at", "scanned_at"):
                 updates[k] = row.get(k) or ("" if k in ("picks", "scans") else None)
