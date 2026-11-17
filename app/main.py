@@ -647,8 +647,16 @@ def sheets_page(request: Request, binder: str = "", at: str = "", done: str = ""
     shot = conn.execute("SELECT * FROM rolls WHERE id=?", (done.upper(),)).fetchone() if done else None
     shot_n = max(db.sheet_nums(shot["photo"]), default=0) if shot else 0
     total = conn.execute(f"SELECT COUNT(*) FROM rolls WHERE {ARCHIVE_SQL}").fetchone()[0]
+    slots = []
+    for r in queue[pos:] + queue[:pos]:
+        have, need = len(db.sheet_nums(r["photo"])), r["sleeves"] or 1
+        for k in range(have + 1, max(need, have + 1) + 1):
+            slots.append({
+                "id": r["id"], "where": db.where(r) if r["filed_at"] else "not filed", "what": r["contents"] or "",
+                "sheet": f"{k}/{need}" if need > 1 else "",
+            })
     return render(
-        request, "sheets.html", binder=binder, binders=binders, queue=queue, current=current, after=after,
+        request, "sheets.html", slots=slots, binder=binder, binders=binders, queue=queue, current=current, after=after,
         have=len(db.sheet_nums(current["photo"])) if current else 0, error=error,
         shot=shot if shot_n else None, shot_n=shot_n, shot_v=view_version(shot) if shot else "",
         total=total, left=len(everything), url=sheets_url,
@@ -667,6 +675,16 @@ async def sheets_shoot(
         return RedirectResponse(sheets_url(binder, stay or r["id"], error=r["id"]), 303)
     pending = any(q["id"] == r["id"] for q in sheet_queue(conn))
     return RedirectResponse(sheets_url(binder, stay or (r["id"] if pending else after), done=r["id"]), 303)
+
+
+@app.post("/api/rolls/{roll_id}/sheet")
+async def api_sheet(roll_id: str, photo: UploadFile = File(...), conn=Depends(get_db)):
+    r = fetch_roll(conn, roll_id)
+    try:
+        save_photo(conn, r["id"], await photo.read())
+    except Exception:
+        return JSONResponse({"error": "not a readable photo"}, 400)
+    return {"id": r["id"], "sheets": len(db.sheet_nums(fetch_roll(conn, r["id"])["photo"]))}
 
 
 @app.get("/photos/{name}")

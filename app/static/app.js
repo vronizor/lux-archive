@@ -237,6 +237,48 @@
     box.hidden = true;
     host.appendChild(box);
     let shown = [], active = -1;
+    const viewer = document.getElementById("viewer");
+    const vImg = document.getElementById("viewer-img");
+    const vPane = document.getElementById("viewer-pane");
+    const vNeg = document.getElementById("viewer-neg");
+    let at = 0;
+    const view = (i) => {
+      at = (i + files.length) % files.length;
+      vImg.src = urls[at];
+      vImg.alt = `Photo ${at + 1}`;
+      vPane.classList.remove("full");
+      document.getElementById("viewer-label").textContent =
+        `${at + 1} of ${files.length} · ${assign[at] >= 0 ? label(slots[assign[at]]) : "skipped"}`;
+      if (!viewer.open) viewer.showModal();
+    };
+    vImg.addEventListener("click", (e) => {
+      const full = !vPane.classList.contains("full");
+      const fx = e.offsetX / vImg.clientWidth, fy = e.offsetY / vImg.clientHeight;
+      vPane.classList.toggle("full", full);
+      if (full) {
+        vPane.scrollLeft = fx * vImg.naturalWidth - vPane.clientWidth / 2;
+        vPane.scrollTop = fy * vImg.naturalHeight - vPane.clientHeight / 2;
+      }
+    });
+    viewer.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => view(at + +b.dataset.step)));
+    vNeg.addEventListener("click", () => {
+      const on = vNeg.getAttribute("aria-pressed") !== "true";
+      vNeg.setAttribute("aria-pressed", String(on));
+      vPane.classList.toggle("inverted", on);
+    });
+    viewer.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") view(at - 1);
+      if (e.key === "ArrowRight") view(at + 1);
+    });
+    let x0 = null;
+    vPane.addEventListener("touchstart", (e) => (x0 = e.touches.length === 1 && !vPane.classList.contains("full") ? e.touches[0].clientX : null), { passive: true });
+    vPane.addEventListener("touchend", (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      if (Math.abs(dx) > 50) view(at + (dx < 0 ? 1 : -1));
+      x0 = null;
+    });
+
     const close = () => { box.hidden = true; active = -1; };
     const mark = () => [...box.children].forEach((b, k) => b.classList.toggle("on", k === active));
     const pick = (value) => {
@@ -302,6 +344,166 @@
   if (/Mac|iPhone|iPad/.test(navigator.platform)) document.querySelectorAll("kbd.mod").forEach((k) => (k.textContent = "⌘"));
 
   const page = document.body.dataset.page;
+
+  const batchIn = document.getElementById("batch-in");
+  if (batchIn) {
+    const slots = JSON.parse(document.getElementById("slots").textContent);
+    const box = document.getElementById("batch");
+    const list = document.getElementById("batch-list");
+    const warn = document.getElementById("batch-warn");
+    const status = document.getElementById("batch-status");
+    const save = document.getElementById("batch-save");
+    const shoot = document.querySelector(".card.shoot");
+    let files = [], assign = [], skip = [], urls = [], busy = false, finished = false;
+
+    const label = (s) => [s.sheet ? `${s.id} sheet ${s.sheet}` : s.id, s.where].join(" · ");
+    const reflow = (from) => {
+      let prev = -1;
+      for (let j = from; j >= 0; j--) if (assign[j] >= 0) { prev = assign[j]; break; }
+      for (let j = from + 1; j < files.length; j++) {
+        if (skip[j]) continue;
+        assign[j] = prev + 1 < slots.length ? ++prev : -1;
+      }
+    };
+    const check = () => {
+      const used = assign.filter((a) => a >= 0);
+      const dup = used.find((a, i) => used.indexOf(a) !== i);
+      const n = used.length;
+      warn.hidden = dup === undefined;
+      if (dup !== undefined) warn.textContent = `Two photos are set to ${label(slots[dup])}. Change or skip one.`;
+      save.disabled = busy || n === 0 || dup !== undefined;
+      save.textContent = `Save ${n} sheet${n === 1 ? "" : "s"}`;
+      if (!busy) status.textContent = files.length - n ? `${files.length - n} skipped` : "";
+    };
+    const draw = () => {
+      list.innerHTML = "";
+      files.forEach((f, i) => {
+        const li = document.createElement("li");
+        const img = document.createElement("img");
+        img.src = urls[i];
+        img.alt = `Photo ${i + 1}`;
+        img.loading = "lazy";
+        img.addEventListener("click", () => view(i));
+        const sel = document.createElement("select");
+        sel.setAttribute("aria-label", `Roll for photo ${i + 1}`);
+        sel.add(new Option("Skip this photo", "-1"));
+        slots.forEach((s, k) => sel.add(new Option(label(s), String(k))));
+        sel.value = String(assign[i]);
+        sel.addEventListener("change", () => {
+          assign[i] = +sel.value;
+          skip[i] = assign[i] < 0;
+          reflow(i);
+          list.querySelectorAll("select").forEach((s, j) => (s.value = String(assign[j])));
+          list.querySelectorAll(".what").forEach((w, j) => (w.textContent = assign[j] >= 0 ? slots[assign[j]].what : ""));
+          list.querySelectorAll("li").forEach((l, j) => l.classList.toggle("skipped", assign[j] < 0));
+          check();
+        });
+        const meta = document.createElement("div");
+        const what = document.createElement("span");
+        what.className = "what muted small";
+        what.textContent = assign[i] >= 0 ? slots[assign[i]].what : "";
+        const mark = document.createElement("span");
+        mark.className = "mark";
+        meta.append(sel, what, mark);
+        li.append(img, meta);
+        li.classList.toggle("skipped", assign[i] < 0);
+        list.append(li);
+      });
+      check();
+    };
+    const viewer = document.getElementById("viewer");
+    const vImg = document.getElementById("viewer-img");
+    const vPane = document.getElementById("viewer-pane");
+    const vNeg = document.getElementById("viewer-neg");
+    let at = 0;
+    const view = (i) => {
+      at = (i + files.length) % files.length;
+      vImg.src = urls[at];
+      vImg.alt = `Photo ${at + 1}`;
+      vPane.classList.remove("full");
+      document.getElementById("viewer-label").textContent =
+        `${at + 1} of ${files.length} · ${assign[at] >= 0 ? label(slots[assign[at]]) : "skipped"}`;
+      if (!viewer.open) viewer.showModal();
+    };
+    vImg.addEventListener("click", (e) => {
+      const full = !vPane.classList.contains("full");
+      const fx = e.offsetX / vImg.clientWidth, fy = e.offsetY / vImg.clientHeight;
+      vPane.classList.toggle("full", full);
+      if (full) {
+        vPane.scrollLeft = fx * vImg.naturalWidth - vPane.clientWidth / 2;
+        vPane.scrollTop = fy * vImg.naturalHeight - vPane.clientHeight / 2;
+      }
+    });
+    viewer.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => view(at + +b.dataset.step)));
+    vNeg.addEventListener("click", () => {
+      const on = vNeg.getAttribute("aria-pressed") !== "true";
+      vNeg.setAttribute("aria-pressed", String(on));
+      vPane.classList.toggle("inverted", on);
+    });
+    viewer.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") view(at - 1);
+      if (e.key === "ArrowRight") view(at + 1);
+    });
+    let x0 = null;
+    vPane.addEventListener("touchstart", (e) => (x0 = e.touches.length === 1 && !vPane.classList.contains("full") ? e.touches[0].clientX : null), { passive: true });
+    vPane.addEventListener("touchend", (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      if (Math.abs(dx) > 50) view(at + (dx < 0 ? 1 : -1));
+      x0 = null;
+    });
+
+    const close = () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+      files = []; assign = []; skip = []; urls = [];
+      box.hidden = true;
+      if (shoot) shoot.hidden = false;
+      batchIn.value = "";
+    };
+    batchIn.addEventListener("change", () => {
+      files = [...batchIn.files];
+      if (!files.length) return;
+      urls = files.map((f) => URL.createObjectURL(f));
+      assign = files.map((_, i) => (i < slots.length ? i : -1));
+      skip = files.map(() => false);
+      box.hidden = false;
+      if (shoot) shoot.hidden = true;
+      draw();
+      box.scrollIntoView({ block: "start" });
+    });
+    document.getElementById("batch-cancel").addEventListener("click", () => !busy && close());
+    save.addEventListener("click", async () => {
+      if (finished) return location.reload();
+      if (busy) return;
+      busy = true;
+      list.querySelectorAll("select").forEach((s) => (s.disabled = true));
+      const todo = files.map((f, i) => [f, assign[i], i]).filter(([, a]) => a >= 0);
+      let ok = 0, failed = 0;
+      for (const [f, a, i] of todo) {
+        status.textContent = `Saving ${ok + failed + 1} of ${todo.length}…`;
+        save.disabled = true;
+        const mark = list.children[i].querySelector(".mark");
+        const body = new FormData();
+        body.append("photo", f, f.name || "sheet.jpg");
+        try {
+          const res = await fetch(`/api/rolls/${slots[a].id}/sheet`, { method: "POST", body });
+          if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.status);
+          mark.textContent = "✓";
+          ok++;
+        } catch (e) {
+          mark.textContent = `✗ ${e.message}`;
+          mark.classList.add("bad");
+          failed++;
+        }
+      }
+      busy = false;
+      finished = true;
+      status.textContent = failed ? `${ok} saved, ${failed} failed: those rolls stay in the list.` : `${ok} saved.`;
+      save.textContent = "Done";
+      save.disabled = false;
+    });
+    addEventListener("beforeunload", (e) => busy && e.preventDefault());
+  }
   const filters = document.getElementById("filters");
   document.addEventListener("click", (ev) => {
     if (filters?.open && !filters.contains(ev.target)) filters.open = false;
