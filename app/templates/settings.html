@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Settings · {{ app_name }}{% endblock %}
+{% block page %}settings{% endblock %}
+{% block main %}
+{% if error %}<p class="toast err" role="alert">{{ error }}</p>{% elif saved %}<p class="toast" role="status">Saved.</p>{% endif %}
+<form class="card settings" method="post" action="/settings">
+  <h1>Your archive</h1>
+  <div class="fields">
+    <div class="f">
+      <label for="name">Name</label>
+      <input id="name" name="name" value="{{ cfg.name }}" maxlength="40" autocomplete="off" required>
+    </div>
+    <div class="f short">
+      <label for="prefix">Roll letter</label>
+      <input id="prefix" name="prefix" value="{{ cfg.prefix }}" maxlength="4" pattern="[A-Za-z]{1,4}" autocapitalize="characters" autocomplete="off" {{ 'readonly' if locked }}>
+    </div>
+    <div class="f">
+      <label for="catalog">Photo catalogue</label>
+      <input id="catalog" name="catalog" value="{{ cfg.catalog }}" maxlength="30" autocomplete="off" placeholder="digiKam, Lightroom, Photos, a folder">
+    </div>
+    <div class="f short">
+      <label for="binder">First binder</label>
+      <input id="binder" name="binder" value="{{ cfg.binder }}" maxlength="20" autocomplete="off">
+    </div>
+  </div>
+  <p class="muted small">Rolls are numbered {{ fid(1) }}, {{ fid(2) }}… {% if locked %}The letter is fixed now that a roll has a number: roll IDs never change.{% else %}Choose the letter before filing the first roll (1 to 4 letters, your initial works well): it can't change afterwards.{% endif %} The catalogue is wherever your scans end up; its name only appears in labels.</p>
+  <button class="btn primary">Save</button>
+</form>
+
+{% if desktop %}
+<section class="card settings" id="phone">
+  <h2>Phone</h2>
+  {% if lan_on %}
+  <div class="pairing">
+    {% if qr %}<div class="qr">{{ qr }}</div>{% endif %}
+    <div>
+      {% if pair_link %}
+      <p><strong>Scan this with the phone's camera</strong> while it's on the same Wi-Fi as this computer. It opens {{ app_name }} and remembers the phone for a year. Then add the page to the home screen.</p>
+      <p class="muted small mono">{{ pair_link }}</p>
+      {% else %}
+      <p>This computer doesn't seem to be on a network right now.</p>
+      {% endif %}
+      <p class="muted small">Works while this computer is on, {{ app_name }} is running and the phone is on the same network. If your system asks whether to allow incoming connections, say yes. If the link stops working after a while, the computer's address changed: scan again.</p>
+      <form method="post" action="/desktop/phone" class="row">
+        <button class="btn small" name="action" value="off">Turn phone access off</button>
+        <button class="btn small ghost" name="action" value="forget" onclick="return confirm('Every paired phone will have to scan the new code. Continue?')">Unpair all phones</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <p>Shoot contact sheets with the phone and upload them straight to the roll, and see what's loaded in each camera, from any phone on your Wi-Fi.</p>
+  <p class="muted small">Off by default: turning it on makes {{ app_name }} reachable from your home network, only by devices that scanned the pairing code.</p>
+  <form method="post" action="/desktop/phone"><button class="btn primary" name="action" value="on">Turn phone access on</button></form>
+  {% endif %}
+</section>
+
+<section class="card settings" id="backup">
+  <h2>Backup</h2>
+  <form method="post" action="/desktop/backup">
+    <div class="f">
+      <label for="backup_dir">Backup folder</label>
+      <div class="pickrow">
+        <input id="backup_dir" name="backup_dir" value="{{ cfg.backup_dir }}" autocomplete="off" spellcheck="false" placeholder="~/Dropbox/Lux Archive backup">
+        <button type="button" class="btn" data-pick="folder" data-target="backup_dir">Choose…</button>
+      </div>
+    </div>
+    <p class="muted small">Choose a folder that syncs somewhere else (iCloud Drive, Dropbox, an external disk). A full copy is written there once a day while the app is running: the index as CSV, your notes, and every contact sheet at full size.
+    {% if backup_error %}<span class="err">Last attempt failed: {{ backup_error }}</span>{% elif backup_at %}Last backup {{ backup_at[:16] | replace('T', ' at ') }}.{% elif cfg.backup_dir %}No backup yet.{% endif %}</p>
+    <div class="row">
+      <button class="btn primary">{{ 'Save and back up now' if not cfg.backup_dir else 'Back up now' }}</button>
+      <a class="btn" href="/desktop/backup.zip">Download a .zip copy</a>
+    </div>
+  </form>
+  <p class="muted small">The .zip holds the index and 3200 px contact sheets: enough to move to another computer, lighter than the folder backup.</p>
+  {% if empty %}
+  <form method="post" action="/desktop/restore" class="restore">
+    <div class="f">
+      <label for="source">Restore from a backup</label>
+      <div class="pickrow">
+        <input id="source" name="source" autocomplete="off" spellcheck="false" placeholder="A backup folder or .zip" required>
+        <button type="button" class="btn" data-pick="folder" data-target="source">Folder…</button>
+        <button type="button" class="btn" data-pick="zip" data-target="source">.zip…</button>
+      </div>
+    </div>
+    <button class="btn">Restore</button>
+  </form>
+  {% else %}
+  <p class="muted small">Restoring is only offered while the archive is empty.</p>
+  {% endif %}
+</section>
+
+<section class="card settings" id="updates">
+  <h2>Updates</h2>
+  <p>This is version <span class="mono">{{ version }}</span>.
+  {% if update %}<strong>{{ update.version }} is available:</strong> <a href="{{ update.url }}" target="_blank" rel="noopener">download it</a>, quit, and open the new one.
+  {% elif update_latest %}The latest release is {{ update_latest }}.{% endif %}
+  {% if update_checked %}<span class="muted small">Checked {{ update_checked[:10] }}.</span>{% endif %}</p>
+  <form method="post" action="/desktop/updates" class="row">
+    <label class="check"><input type="checkbox" name="updates" value="1" {{ 'checked' if cfg.updates == '1' }}> Check GitHub for a new version once a day</label>
+    <button class="btn small">Save and check now</button>
+  </form>
+  <p class="muted small">Updating never touches your archive, and the database is copied to a <code>safety</code> folder the first time a new version opens it.</p>
+</section>
+
+<section class="card settings">
+  <h2>This computer</h2>
+  <p class="muted small">Your archive lives in <span class="mono">{{ data_dir }}</span></p>
+  <p class="muted small">{{ app_name }} keeps running in the background after you close this tab, so the phone can reach it. Opening the app again brings this page back.</p>
+  <form method="post" action="/desktop/quit"><button class="btn">Quit {{ app_name }}</button></form>
+</section>
+{% endif %}
+{% endblock %}

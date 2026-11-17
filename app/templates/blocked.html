@@ -1,0 +1,11 @@
+{% extends "_plain.html" %}
+{% block main %}
+{% if paired %}
+<h1>Only on the computer</h1>
+<p>Settings and note editing are done on the computer {{ app_name }} runs on.</p>
+<p><a href="/">Back to the archive</a></p>
+{% else %}
+<h1>This device isn't paired</h1>
+<p>On the computer, open {{ app_name }} → Settings → Phone, and scan the code shown there with this device's camera.</p>
+{% endif %}
+{% endblock %}

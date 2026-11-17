@@ -5,6 +5,7 @@ import io
 import os
 from pathlib import Path
 import re
+import tempfile
 from urllib.parse import urlencode
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -14,11 +15,13 @@ from fastapi.templating import Jinja2Templates
 from markupsafe import Markup, escape
 import markdown
 from PIL import Image, ImageOps
+import segno
+from starlette.background import BackgroundTask
 
-from . import contact, db, frames, seasons, stats
+from . import contact, db, desktop, frames, seasons, stats
 from .db import ARCHIVE_SQL, LIFE, STAGES, get_db, now
+from .version import VERSION
 
-APP_NAME = os.environ.get("APP_NAME", "Lux Archive")
 TRUTHY = ("1", "on", "true", "yes", "y")
 PREVIEW_MAX = int(os.environ.get("LUX_PHOTO_MAX", "0"))
 
@@ -31,12 +34,12 @@ def when(roll, short=False):
 
 HERE = Path(__file__).parent
 
-app = FastAPI(title=APP_NAME, docs_url=None, redoc_url=None)
+app = FastAPI(title="Lux Archive", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
-templates.env.filters["fmtdate"] = lambda iso: datetime.fromisoformat(iso).strftime("%-d %b") if iso else ""
+templates.env.filters["fmtdate"] = lambda iso: f"{datetime.fromisoformat(iso):%d %b}".lstrip("0") if iso else ""
 templates.env.globals.update(
-    app_name=APP_NAME,
+    fid=db.format_id,
     seasons=seasons.SEASONS,
     processes=seasons.PROCESSES,
     span=seasons.span,
@@ -78,15 +81,39 @@ GAPS = [
     ("not filed", f"{ARCHIVE_SQL} AND filed_at IS NULL"),
     ("missing a sheet", FILTERS["need-sheet"][1]),
     ("without a contact sheet", FILTERS["need-photo"][1]),
-    ("not in digiKam", FILTERS["need-link"][1]),
+    ("not in {catalog}", FILTERS["need-link"][1]),
     ("to review", FILTERS["need-review"][1]),
     ("to scan", FILTERS["need-scan"][1]),
 ]
 
 
+@app.middleware("http")
+async def guard(request: Request, call_next):
+    if db.DESKTOP:
+        if desktop.cross_site(request):
+            return HTMLResponse("Cross-site request refused.", 403)
+        if not desktop.is_local(request):
+            path = request.url.path
+            conn = db.connect()
+            try:
+                ok = db.setting("lan") == "1" and (path == "/pair" or desktop.paired(request, conn))
+                conn.commit()
+            finally:
+                conn.close()
+            if not ok or path.startswith(desktop.LOCAL_ONLY):
+                return templates.TemplateResponse(
+                    request, "blocked.html", {"app_name": db.setting("name"), "paired": ok}, status_code=403
+                )
+    return await call_next(request)
+
+
 @app.on_event("startup")
 def startup():
+    if db.DESKTOP:
+        desktop.safety_copy()
     db.init()
+    if db.DESKTOP:
+        desktop.start_background()
     with db.connect() as conn:
         row = conn.execute("SELECT value FROM meta WHERE key='positive_version'").fetchone()
         if not row or row["value"] != contact.VERSION:
@@ -106,6 +133,11 @@ def shooting():
 
 def render(request, name, **ctx):
     ctx.setdefault("shooting", shooting())
+    ctx.update(cfg=db.settings(), app_name=db.setting("name"), desktop=db.DESKTOP, update=None)
+    if db.DESKTOP:
+        with db.connect() as conn:
+            ctx["update"] = desktop.update_notice(conn)
+        ctx["on_computer"] = desktop.is_local(request)
     return templates.TemplateResponse(request, name, ctx)
 
 
@@ -170,6 +202,27 @@ def insert_roll(conn, num, fields, filed=True, ts=None, event=None):
     return roll_id
 
 
+def setup_steps(request, conn):
+    if not db.DESKTOP or not desktop.is_local(request) or db.get_meta(conn, "setup_done"):
+        return None
+    has_rolls = rolls_exist(conn)
+    steps = [
+        {"label": "Choose your roll letter", "hint": f"Rolls will be numbered {db.format_id(1)}, {db.format_id(2)}… It can't change later.", "href": "/settings", "done": has_rolls or db.get_meta(conn, "set.prefix") is not None},
+        {"label": "File your first roll", "hint": "Or load one in a camera.", "href": "/add", "done": has_rolls},
+        {"label": "Set a backup folder", "hint": "Until then the only copy is on this computer.", "href": "/settings#backup", "done": bool(db.setting("backup_dir"))},
+        {"label": "Pair your phone", "hint": "Optional: shoot contact sheets straight into a roll.", "href": "/settings#phone", "done": db.setting("lan") == "1"},
+    ]
+    return None if all(s["done"] for s in steps) else steps
+
+
+def backup_nudge(request, conn):
+    if not db.DESKTOP or not desktop.is_local(request) or not conn.execute("SELECT 1 FROM rolls LIMIT 1").fetchone():
+        return None
+    if db.get_meta(conn, "backup_error"):
+        return "The last backup failed."
+    return None if db.setting("backup_dir") else "No backup yet: the only copy of this archive is on this computer."
+
+
 def in_flight(conn):
     out = {p: [] for p in ("camera", "batch", "lab")}
     for r in conn.execute(f"SELECT * FROM rolls WHERE NOT {ARCHIVE_SQL} ORDER BY num"):
@@ -193,6 +246,8 @@ def home(request: Request, conn=Depends(get_db)):
         n_sessions=len(groups),
         recent=conn.execute("SELECT * FROM rolls ORDER BY updated_at DESC LIMIT 5").fetchall(),
         sheets_left=len(sheet_queue(conn)),
+        setup=setup_steps(request, conn),
+        nudge=backup_nudge(request, conn),
     )
 
 
@@ -209,7 +264,7 @@ def add_form(request: Request, saved: str = "", error: str = "", conn=Depends(ge
         "id": db.format_id(db.next_num(conn)),
         "start_year": (last["end_year"] or last["start_year"]) if last else "",
         "start_season": (last["end_season"] or last["start_season"]) if last else "",
-        "binder": last["binder"] if last else "B1",
+        "binder": last["binder"] if last else db.setting("binder"),
         "sleeve": db.after_slot(last) if last else 1,
         "camera": last["camera"] if last else "",
         "process": last["process"] if last else None,
@@ -355,7 +410,7 @@ def index(request: Request, sort: str = "id", dir: str = "asc", stage: str = "al
     if None not in ys and ys[0] > ys[1]:
         ys = (ys[1], ys[0])
 
-    if re.fullmatch(r"[vV]?\d{1,3}", q.strip()):
+    if re.fullmatch(rf"(?:{db.setting('prefix')})?\d{{1,4}}", q.strip(), re.I):
         hit = conn.execute("SELECT id FROM rolls WHERE num=?", (db.parse_id(q),)).fetchone()
         if hit:
             return RedirectResponse(f"/rolls/{hit['id']}", 303)
@@ -430,7 +485,7 @@ def roll_page(request: Request, roll_id: str, saved: int = 0, error: str = "", c
             gap = conn.execute(
                 f"SELECT ? AS label, (SELECT id FROM rolls WHERE num<? AND {sql} ORDER BY num DESC LIMIT 1) AS prev, "
                 f"(SELECT id FROM rolls WHERE num>? AND {sql} ORDER BY num LIMIT 1) AS next",
-                (label, r["num"], r["num"]),
+                (label.format(catalog=db.setting("catalog")), r["num"], r["num"]),
             ).fetchone()
             break
     prefetch = []
@@ -889,24 +944,225 @@ def import_rows(conn, rows):
 @app.post("/import", response_class=HTMLResponse)
 async def import_csv(request: Request, file: UploadFile = File(...), conn=Depends(get_db)):
     text = (await file.read()).decode("utf-8-sig")
+    if not conn.execute("SELECT 1 FROM rolls LIMIT 1").fetchone() and not db.get_meta(conn, "set.prefix"):
+        m = re.search(r"^\s*([A-Za-z]{1,4})\d+\s*[,;\t]", text.split("\n", 1)[-1], re.M)
+        if m:
+            db.save_settings(conn, {"prefix": m.group(1).upper()})
     dialect = csv.Sniffer().sniff(text.splitlines()[0], delimiters=",;\t") if text.strip() else csv.excel
     added, skipped, errors = import_rows(conn, csv.DictReader(io.StringIO(text), dialect=dialect))
     return render(request, "import.html", result={"added": added, "skipped": skipped, "errors": errors})
 
 
-def md_page(request, name, title):
-    html = markdown.markdown((HERE / f"{name}.md").read_text(), extensions=["tables", "toc"], extension_configs={"toc": {"toc_depth": "2-3"}})
-    return render(request, "docs.html", body=Markup(html), doc=name, title=title)
+NOTES = {"docs": "Docs", "field": "Field"}
+
+
+def note_text(name):
+    custom = db.DATA_DIR / f"{name}.md"
+    if custom.exists():
+        return custom.read_text(encoding="utf-8"), True
+    if not db.DESKTOP:
+        return (HERE / f"{name}.md").read_text(encoding="utf-8"), False
+    text = (HERE / "starter" / f"{name}.md").read_text(encoding="utf-8")
+    for token, value in (("%PREFIX%", db.setting("prefix")), ("%CATALOG%", db.setting("catalog")), ("%APP%", db.setting("name"))):
+        text = text.replace(token, value)
+    return text, False
+
+
+def md_page(request, name):
+    text, custom = note_text(name)
+    html = markdown.markdown(text, extensions=["tables", "toc"], extension_configs={"toc": {"toc_depth": "2-3"}})
+    return render(request, "docs.html", body=Markup(html), doc=name, title=NOTES[name], custom=custom)
 
 
 @app.get("/docs", response_class=HTMLResponse)
 def docs_page(request: Request):
-    return md_page(request, "docs", "Docs")
+    return md_page(request, "docs")
 
 
 @app.get("/field", response_class=HTMLResponse)
 def field_page(request: Request):
-    return md_page(request, "field", "Field")
+    return md_page(request, "field")
+
+
+def editable_note(name):
+    if not db.DESKTOP or name not in NOTES:
+        raise HTTPException(404)
+    return name
+
+
+@app.get("/notes/{name}/edit", response_class=HTMLResponse)
+def note_edit(request: Request, name: str):
+    text, custom = note_text(editable_note(name))
+    return render(request, "note_edit.html", doc=name, title=NOTES[name], text=text, custom=custom)
+
+
+@app.post("/notes/{name}")
+async def note_save(request: Request, name: str):
+    form = await request.form()
+    path = db.DATA_DIR / f"{editable_note(name)}.md"
+    if form.get("action") == "reset":
+        path.unlink(missing_ok=True)
+    else:
+        write_atomic(path, (form.get("text") or "").replace("\r\n", "\n").encode("utf-8"))
+    return RedirectResponse(f"/{name}", 303)
+
+
+@app.get("/api/ping")
+def ping():
+    return {"app": "lux-archive", "version": VERSION}
+
+
+def rolls_exist(conn):
+    return conn.execute("SELECT 1 FROM rolls LIMIT 1").fetchone() is not None or db.get_meta(conn, "last_issued") is not None
+
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request, saved: int = 0, error: str = "", conn=Depends(get_db)):
+    ctx = {"locked": rolls_exist(conn), "saved": saved, "error": error, "version": VERSION}
+    if db.DESKTOP:
+        ip = desktop.lan_ip()
+        link = f"http://{ip}:{desktop.state.port}/pair?k={desktop.pair_token(conn)}" if ip else None
+        ctx.update(
+            pair_link=link,
+            qr=Markup(segno.make(link, error="m").svg_inline(scale=5, border=3, dark="#000", light="#fff")) if link else None,
+            lan_on=db.setting("lan") == "1",
+            backup_at=db.get_meta(conn, "backup_at"),
+            backup_error=db.get_meta(conn, "backup_error"),
+            update_checked=db.get_meta(conn, "update_checked"),
+            update_latest=db.get_meta(conn, "update_latest"),
+            data_dir=str(db.DATA_DIR),
+            empty=not conn.execute("SELECT 1 FROM rolls LIMIT 1").fetchone(),
+        )
+    return render(request, "settings.html", **ctx)
+
+
+def settings_redirect(error="", anchor=""):
+    query = urlencode({"error": error}) if error else "saved=1"
+    return RedirectResponse(f"/settings?{query}{anchor}", 303)
+
+
+@app.post("/settings")
+async def settings_save(request: Request, conn=Depends(get_db)):
+    form = await request.form()
+    values, error = {}, ""
+    for key, limit in (("name", 40), ("catalog", 30), ("binder", 20)):
+        value = (form.get(key) or "").strip()[:limit]
+        if value:
+            values[key] = value
+    prefix = (form.get("prefix") or "").strip().upper()
+    if prefix and (prefix != db.setting("prefix") or not rolls_exist(conn)):
+        if rolls_exist(conn):
+            error = "The prefix can't change once a roll has a number."
+        elif not re.fullmatch(r"[A-Z]{1,4}", prefix):
+            error = "The prefix is 1 to 4 letters."
+        else:
+            values["prefix"] = prefix
+    db.save_settings(conn, values)
+    return settings_redirect(error)
+
+
+def desktop_only():
+    if not db.DESKTOP:
+        raise HTTPException(404)
+
+
+@app.get("/pair")
+def pair(k: str = "", conn=Depends(get_db)):
+    desktop_only()
+    if not desktop.token_ok(conn, k):
+        raise HTTPException(403, "This pairing link is no longer valid. Scan the code in Settings again.")
+    res = RedirectResponse("/", 303)
+    res.set_cookie(desktop.COOKIE, k, max_age=400 * 86400, httponly=True, samesite="lax")
+    return res
+
+
+@app.post("/desktop/phone")
+async def desktop_phone(request: Request, conn=Depends(get_db)):
+    desktop_only()
+    form = await request.form()
+    if form.get("action") == "forget":
+        desktop.pair_token(conn, renew=True)
+        return settings_redirect(anchor="#phone")
+    db.save_settings(conn, {"lan": "1" if form.get("action") == "on" else "0"})
+    desktop.stop_server(restart=True)
+    return render(request, "pause.html", restarting=True)
+
+
+@app.post("/desktop/backup")
+async def desktop_backup(request: Request, conn=Depends(get_db)):
+    desktop_only()
+    form = await request.form()
+    if "backup_dir" in form:
+        folder = (form.get("backup_dir") or "").strip()
+        if folder:
+            try:
+                Path(folder).expanduser().mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                return settings_redirect(f"Can't use that folder: {e}", "#backup")
+        db.save_settings(conn, {"backup_dir": folder})
+    conn.commit()
+    error = desktop.run_backup(conn) if db.setting("backup_dir") else ""
+    return settings_redirect(error and f"Backup failed: {error}", "#backup")
+
+
+@app.get("/desktop/backup.zip")
+def desktop_backup_zip():
+    desktop_only()
+    from . import backup
+
+    fd, tmp = tempfile.mkstemp(suffix=".zip")
+    os.close(fd)
+    backup.make_zip(tmp)
+    return FileResponse(
+        tmp, filename=f"lux-archive-backup-{datetime.now():%Y-%m-%d}.zip", media_type="application/zip",
+        background=BackgroundTask(os.unlink, tmp),
+    )
+
+
+@app.post("/desktop/restore")
+async def desktop_restore(request: Request):
+    desktop_only()
+    from . import backup
+
+    form = await request.form()
+    try:
+        added, errors = backup.restore((form.get("source") or "").strip())
+    except (RuntimeError, OSError, ValueError) as e:
+        return settings_redirect(f"Restore failed: {e}", "#backup")
+    return RedirectResponse("/", 303)
+
+
+@app.post("/desktop/updates")
+async def desktop_updates(request: Request, conn=Depends(get_db)):
+    desktop_only()
+    form = await request.form()
+    db.save_settings(conn, {"updates": "1" if form.get("updates") else "0"})
+    if form.get("updates") and not desktop.check_update(conn):
+        return settings_redirect("Couldn't reach GitHub to check for updates.", "#updates")
+    return settings_redirect(anchor="#updates")
+
+
+@app.post("/desktop/setup-done")
+def desktop_setup_done(conn=Depends(get_db)):
+    desktop_only()
+    db.set_meta(conn, "setup_done", now())
+    return RedirectResponse("/", 303)
+
+
+@app.post("/desktop/pick")
+def desktop_pick(kind: str = "folder"):
+    desktop_only()
+    try:
+        return {"path": desktop.pick("zip" if kind == "zip" else "folder")}
+    except Exception as e:
+        return JSONResponse({"path": None, "error": str(e)})
+
+
+@app.post("/desktop/quit")
+def desktop_quit(request: Request):
+    desktop_only()
+    desktop.stop_server()
+    return render(request, "pause.html", restarting=False)
 
 
 @app.get("/sw.js")

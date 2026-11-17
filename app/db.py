@@ -7,6 +7,7 @@ from pathlib import Path
 from . import frames, seasons
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", "/data"))
+DESKTOP = os.environ.get("LUX_DESKTOP") == "1"
 DB_PATH = DATA_DIR / "lux.db"
 PHOTO_DIR = DATA_DIR / "photos"
 ORIG_DIR = PHOTO_DIR / "originals"
@@ -58,6 +59,59 @@ CREATE INDEX IF NOT EXISTS events_ts ON events(ts);
 
 UNPLACE = "binder='', sleeve=NULL, sleeves=1"
 
+DEFAULTS = {
+    "name": os.environ.get("APP_NAME", "Lux Archive"),
+    "prefix": "V",
+    "catalog": "digiKam",
+    "binder": "B1",
+    "backup_dir": "",
+    "updates": "1",
+    "lan": "0",
+}
+_settings = None
+
+
+def settings():
+    global _settings
+    if _settings is None:
+        loaded = dict(DEFAULTS)
+        if DB_PATH.exists():
+            conn = connect()
+            try:
+                for r in conn.execute("SELECT key, value FROM meta WHERE key LIKE 'set.%'"):
+                    if r["key"][4:] in DEFAULTS:
+                        loaded[r["key"][4:]] = r["value"]
+            except sqlite3.OperationalError:
+                pass
+            finally:
+                conn.close()
+        _settings = loaded
+    return _settings
+
+
+def setting(key):
+    return settings()[key]
+
+
+def get_meta(conn, key, default=None):
+    row = conn.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+    return row["value"] if row else default
+
+
+def set_meta(conn, key, value):
+    conn.execute(
+        "INSERT INTO meta(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (key, str(value)),
+    )
+
+
+def save_settings(conn, values):
+    global _settings
+    for key, value in values.items():
+        if key in DEFAULTS:
+            set_meta(conn, f"set.{key}", value)
+    _settings = {**settings(), **{k: str(v) for k, v in values.items() if k in DEFAULTS}}
+
 
 def where(r):
     binder, sleeve, n = r["binder"] or "", r["sleeve"], r["sleeves"] or 1
@@ -99,7 +153,7 @@ def init():
 def sheet_nums(photo):
     nums = []
     for name in (photo or "").split():
-        m = re.fullmatch(r"V\d+-(\d+)\.jpg", name)
+        m = re.fullmatch(r"[A-Z]+\d+-(\d+)\.jpg", name)
         if m:
             nums.append(int(m.group(1)))
     return sorted(nums)
@@ -152,13 +206,11 @@ def get_db():
 
 
 def format_id(num):
-    return f"V{num:03d}"
+    return f"{setting('prefix')}{num:03d}"
 
 
 def parse_id(text):
-    text = (text or "").strip().upper()
-    if text.startswith("V"):
-        text = text[1:]
+    text = (text or "").strip().upper().lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
     return int(text) if text.isdigit() and int(text) > 0 else None
 
 

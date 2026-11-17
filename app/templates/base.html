@@ -16,7 +16,7 @@ try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement
 <meta name="theme-color" content="#0e0c0b" media="(prefers-color-scheme: dark)">
 </head>
 {% from "_keys.html" import row %}
-<body data-page="{% block page %}{% endblock %}">
+<body data-page="{% block page %}{% endblock %}" data-prefix="{{ cfg.prefix }}">
 <header class="top">
   <a class="brand" href="/">
     <svg class="mark" viewBox="0 0 32 24" aria-hidden="true">
@@ -29,7 +29,7 @@ try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement
   </a>
   <nav>
     <a href="/rolls" class="{{ 'on' if request.url.path.startswith('/rolls') }}">Index</a>
-    <a href="/field" class="{{ 'on' if request.url.path in ('/field', '/docs') }}">Notes</a>
+    <a href="/field" class="{{ 'on' if request.url.path in ('/field', '/docs') or request.url.path.startswith('/notes') }}">Notes</a>
     {% if shooting %}
     <a href="/add" class="{{ 'on' if request.url.path == '/add' }}">File</a>
     <a href="/load" class="add {{ 'on' if request.url.path == '/load' }}">+ Load</a>
@@ -37,6 +37,7 @@ try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement
     <a href="/load" class="{{ 'on' if request.url.path == '/load' }}">Load</a>
     <a href="/add" class="add {{ 'on' if request.url.path == '/add' }}">+ Roll</a>
     {% endif %}
+    {% if not desktop or on_computer %}<a href="/settings" class="gear {{ 'on' if request.url.path == '/settings' }}" title="Settings" aria-label="Settings">⚙</a>{% endif %}
     <button type="button" class="kbd-hint" id="kbd" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">⌨</button>
     <button type="button" class="lamp" id="lamp" aria-label="Switch between light table and darkroom">
       <span class="bulb" aria-hidden="true"></span><span class="lamp-label"></span>
@@ -45,6 +46,7 @@ try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement
 </header>
 <div class="sprocket-rule" aria-hidden="true"></div>
 <main>
+{% if update %}<p class="update-bar" role="status">{{ app_name }} {{ update.version }} is out. <a href="{{ update.url }}" target="_blank" rel="noopener">Download it</a>, quit this one, and open the new one: your archive stays where it is.</p>{% endif %}
 {% block main %}{% endblock %}
 </main>
 <dialog class="card keys" id="keys" aria-labelledby="keys-title">

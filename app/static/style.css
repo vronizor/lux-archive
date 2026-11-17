@@ -545,6 +545,25 @@ code { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 
 .noteform input { width: 100%; font: inherit; font-size: .9rem; padding: .3rem .5rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
 .noteform input:focus { outline: none; border-color: var(--accent); }
 
+nav a.gear { font-size: 1.05rem; padding: .3rem .45rem; }
+.update-bar { background: var(--lit-bg); border: 1px solid var(--accent); border-radius: 10px; padding: .6rem .9rem; margin: 0 0 1rem; }
+.settings h1 { font-size: 1.4rem; margin: 0 0 .8rem; }
+.settings h2 { margin-top: 0; }
+.settings .fields { grid-template-columns: 2fr 1fr; margin-bottom: .6rem; }
+.settings .f { margin-bottom: .5rem; }
+.settings .row, .noteedit .row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin-top: .6rem; }
+.settings .restore { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.pairing { display: flex; gap: 1.2rem; align-items: flex-start; flex-wrap: wrap; }
+.pairing .qr { background: #fff; border-radius: 10px; padding: 4px; line-height: 0; }
+.pairing > div:last-child { flex: 1; min-width: 16rem; }
+.pairing p { margin-top: 0; }
+.pairing .mono { word-break: break-all; }
+.noteedit textarea {
+  width: 100%; min-height: 60vh; font: .9rem/1.5 "IBM Plex Mono", ui-monospace, monospace; padding: .8rem;
+  background: var(--bg); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 10px; resize: vertical;
+}
+@media (max-width: 640px) { .settings .fields { grid-template-columns: 1fr; } }
+
 .shoot-head h1 { margin: 0 0 .2rem; }
 .meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: .5rem 0 1rem; }
 .meter span { display: block; height: 100%; background: var(--accent); }
@@ -565,6 +584,16 @@ code { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 
 .upnext a.placeable { text-decoration: none; color: inherit; }
 .upnext a.placeable.on { border-color: var(--accent); }
 .notes-tabs { margin-bottom: .6rem; }
+.setup ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
+.setup-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; }
+.setup-head h2 { margin: 0; }
+.setup li a { display: flex; gap: .7rem; align-items: baseline; text-decoration: none; color: inherit; padding: .45rem .5rem; border-radius: 8px; }
+.setup li a:hover { background: var(--bg); }
+.setup .tick { flex: none; width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 1px solid var(--line-strong); display: inline-grid; place-items: center; font: 500 .8rem "IBM Plex Mono", monospace; color: var(--muted); }
+.setup li.done .tick { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.setup li.done strong { font-weight: 400; color: var(--muted); }
+.pickrow { display: flex; gap: .5rem; }
+.pickrow input { flex: 1; min-width: 0; }
 .sheets-btn .muted { font-weight: 400; }
 .more > summary { display: none; }
 @media (max-width: 640px) {

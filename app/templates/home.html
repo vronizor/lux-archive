@@ -1,13 +1,27 @@
 {% extends "base.html" %}
 {% block page %}home{% endblock %}
 {% block main %}
+{% if setup %}
+<section class="card setup">
+  <div class="setup-head"><h2>Getting started</h2><form method="post" action="/desktop/setup-done"><button class="btn small ghost">Hide this</button></form></div>
+  <ol>
+    {% for s in setup %}
+    <li class="{{ 'done' if s.done }}"><a href="{{ s.href }}"><span class="tick" aria-hidden="true">{{ '✓' if s.done else loop.index }}</span><span><strong>{{ s.label }}</strong> <span class="muted small">{{ 'Done.' if s.done else s.hint }}</span></span></a></li>
+    {% endfor %}
+  </ol>
+</section>
+{% elif nudge %}
+<p class="update-bar nudge" role="status">{{ nudge }} <a href="/settings#backup">{{ 'See why' if 'failed' in nudge else 'Set a backup folder' }}</a></p>
+{% endif %}
 {% if counts.total == 0 and not (flight.camera or flight.batch or flight.lab) %}
 <section class="empty card lit">
-  <p class="edge">V001 ▸ 00</p>
+  <p class="edge">{{ fid(1) }} ▸ 00</p>
   <h1>The archive is empty.</h1>
   <p>Every roll you file gets the next number. Start with the one in your hand.</p>
   <a class="btn primary big" href="/add">File the first roll</a>
   <p class="muted small">Already numbered some on paper? <a href="/import">Import a CSV</a>.</p>
+  {% if not setup %}<p class="muted small">Rolls will be numbered {{ fid(1) }}, {{ fid(2) }}… The letter can't change once a roll has a number: pick yours in <a href="/settings">Settings</a> first.</p>{% endif %}
+  {% if desktop %}<p class="muted small">Coming from another computer? <a href="/settings#backup">Restore a backup</a>.</p>{% endif %}
 </section>
 {% else %}
 <section class="hero">
@@ -41,7 +55,7 @@
       {% if r.contents %}<p class="cam-contents">{{ r.contents }}</p>{% endif %}
       {% if r.notes %}<ul class="cam-notes">{% for n in r.notes.splitlines() if n.strip() %}<li>{{ n }}</li>{% endfor %}</ul>{% endif %}
       <form method="post" action="/rolls/{{ r.id }}/note" class="noteform">
-        <input name="note" placeholder="Gràcia party · frames 12–14 +2 stops" autocomplete="off" aria-label="Add to {{ r.id }}" enterkeyhint="done">
+        <input name="note" placeholder="Birthday dinner · frames 12–14 +2 stops" autocomplete="off" aria-label="Add to {{ r.id }}" enterkeyhint="done">
         <div class="note-to">
           <button class="btn small" name="to" value="contents">+ Contents</button>
           <button class="btn small" name="to" value="notes">+ Note</button>
@@ -111,7 +125,7 @@
       {% if counts.need_file %}<li><a href="/refile?show=unfiled"><span class="n">{{ counts.need_file }}</span> roll{{ 's' if counts.need_file != 1 }} back from the lab to file</a></li>{% endif %}
       <li><a href="{{ '/sheets' if counts.need_photo else '/rolls?stage=need-photo' }}"><span class="n">{{ counts.need_photo }}</span> without a contact sheet</a></li>
       {% if counts.need_sheet %}<li><a href="/rolls?stage=need-sheet"><span class="n">{{ counts.need_sheet }}</span> roll{{ 's' if counts.need_sheet != 1 }} on two sleeves missing a sheet</a></li>{% endif %}
-      <li><a href="/rolls?stage=need-link"><span class="n">{{ counts.need_link }}</span> contact sheet{{ 's' if counts.need_link != 1 }} not in digiKam yet</a></li>
+      <li><a href="/rolls?stage=need-link"><span class="n">{{ counts.need_link }}</span> contact sheet{{ 's' if counts.need_link != 1 }} not in {{ cfg.catalog }} yet</a></li>
       <li><a href="/rolls?stage=need-review"><span class="n">{{ counts.need_review }}</span> contact sheet{{ 's' if counts.need_review != 1 }} to review for picks</a></li>
       <li><a href="/rolls?stage=need-scan"><span class="n">{{ counts.need_scan }}</span> roll{{ 's' if counts.need_scan != 1 }} with picks to scan{% if counts.need_scan %} <span class="muted">· {{ counts.frames_left }} frames{% if counts.whole_left %} + {{ counts.whole_left }} whole roll{{ 's' if counts.whole_left > 1 }}{% endif %}</span>{% endif %}</a></li>
     </ul>
