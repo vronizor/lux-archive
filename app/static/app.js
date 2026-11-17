@@ -18,6 +18,18 @@
   dark.addEventListener?.("change", paintLamp);
   paintLamp();
 
+  const ranges = document.querySelectorAll("[data-range]");
+  const showRange = (key) => {
+    if (!document.querySelector(`[data-chart="${key}"]`)) return;
+    ranges.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.range === key)));
+    document.querySelectorAll("[data-chart]").forEach((c) => { c.hidden = c.dataset.chart !== key; });
+  };
+  ranges.forEach((b) => b.addEventListener("click", () => {
+    showRange(b.dataset.range);
+    try { localStorage.setItem("lux-range", b.dataset.range); } catch (e) {}
+  }));
+  try { const saved = localStorage.getItem("lux-range"); if (saved) showRange(saved); } catch (e) {}
+
   const LABELS = { done: "done", todo: "to do", part: "sheet missing" };
   const nextState = (stage, state) => {
     if (stage === "picked") return { todo: "skip", skip: "todo" }[state];

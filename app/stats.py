@@ -89,7 +89,10 @@ def _series(rolls, stage, first, last):
     return out
 
 
-def burnup_svg(rolls):
+RANGES = [(7, "7d"), (30, "30d"), (None, "All")]
+
+
+def burnup_svg(rolls, window=None):
     stamps = [
         datetime.fromisoformat(r[f"{s}_at"]).date()
         for r in rolls for s in STAGES if r[f"{s}_at"]
@@ -97,8 +100,16 @@ def burnup_svg(rolls):
     if not stamps:
         return ""
     last = date.today()
-    first = min(min(stamps), last - timedelta(days=6))
+    if window:
+        first = last - timedelta(days=window - 1)
+    else:
+        first = min(min(stamps), last - timedelta(days=6))
     series = {s: _series(rolls, s, first, last) for s in STAGES}
+    if window:
+        before = first - timedelta(days=1)
+        base = {s: _series(rolls, s, before, before)[0] for s in STAGES}
+        series = {s: [v - base[s] for v in vals] for s, vals in series.items()}
+    sign = "+" if window else ""
     days = (last - first).days or 1
     top = max(max(v[-1] for v in series.values()), 4)
     step = 10 if top > 20 else 2
@@ -143,7 +154,7 @@ def burnup_svg(rolls):
     for ly, s, v in ends:
         out.append(
             f'<text class="end s-{s}" x="{L + pw + 6}" y="{ly + 4:.1f}">'
-            f'<tspan class="n">{v}</tspan> {escape(LINE_LABEL[s])}</text>'
+            f'<tspan class="n">{sign}{v}</tspan> {escape(LINE_LABEL[s])}</text>'
         )
     out.append("</svg>")
     return "".join(out)

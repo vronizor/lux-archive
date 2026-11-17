@@ -91,9 +91,19 @@
 
 <div class="grid2">
   <section class="card">
-    <h2>Progress</h2>
-    {{ chart }}
-    <p class="muted small">Cumulative rolls per stage. “Reviewed” means you've decided what to scan; {{ counts.scan_complete }} of {{ counts.scan_rolls }} rolls with picks are fully scanned.</p>
+    <div class="card-head">
+      <h2>Progress</h2>
+      <div class="seg mini" role="group" aria-label="Time range">
+        {% for c in charts %}<button type="button" data-range="{{ c.label }}" aria-pressed="{{ 'true' if loop.last else 'false' }}">{{ c.label }}</button>{% endfor %}
+      </div>
+    </div>
+    {% for c in charts %}
+    <div data-chart="{{ c.label }}"{% if not loop.last %} hidden{% endif %}>
+      {{ c.svg }}
+      {% if c.days %}<p class="muted small">Rolls that reached each stage in the last {{ c.days }} days.</p>
+      {% else %}<p class="muted small">Cumulative rolls per stage. “Reviewed” means you've decided what to scan; {{ counts.scan_complete }} of {{ counts.scan_rolls }} rolls with picks are fully scanned.</p>{% endif %}
+    </div>
+    {% endfor %}
   </section>
 
   <section class="card">
