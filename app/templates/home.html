@@ -25,6 +25,7 @@
     <a class="btn big" href="/load">Load a roll</a>
     <a class="btn primary big" href="/add">+ File a roll</a>
     {% endif %}
+    {% if sheets_left %}<a class="btn big sheets-btn" href="/sheets">Shoot contact sheets <span class="muted">· {{ sheets_left }} to go</span></a>{% endif %}
   </div>
 </section>
 
@@ -52,7 +53,7 @@
     <p class="muted small">Nothing loaded. <a href="/load">Load a roll</a>.</p>
     {% endfor %}
   </div>
-  <div class="card">
+  <div class="card {{ 'quiet' if not flight.batch }}">
     <h2>Next lab batch <span class="muted">· {{ flight.batch|length }}</span></h2>
     {% if flight.batch %}
     <ul class="outlist">{% for r in flight.batch %}<li><a class="rid" href="/rolls/{{ r.id }}">{{ r.id }}</a> {{ speed(r) }}{% if r.contents %}<span class="muted small"> · {{ r.contents }}</span>{% endif %}</li>{% endfor %}</ul>
@@ -63,7 +64,7 @@
     <datalist id="labs">{% for s in labs %}<option value="{{ s }}">{% endfor %}</datalist>
     {% else %}<p class="muted small">No unloaded rolls waiting.</p>{% endif %}
   </div>
-  <div class="card">
+  <div class="card {{ 'quiet' if not flight.lab }}">
     <h2>At the lab <span class="muted">· {{ flight.lab|length }}</span></h2>
     {% if flight.lab %}
     <ul class="outlist">{% for r in flight.lab %}<li>
@@ -75,6 +76,8 @@
   </div>
 </section>
 
+<details class="more" id="more" open>
+<summary>Archive progress <span class="muted">· {{ counts.done }} of {{ counts.total }} rolls done</span></summary>
 <section class="frames">
   {% for s in stages %}
   <a class="frame-stat s-{{ s }}" href="/rolls?stage={{ {'filed':'all','photographed':'need-photo','linked':'need-link','picked':'need-review'}[s] }}">
@@ -106,7 +109,7 @@
     <h2 class="mt">Next up</h2>
     <ul class="nextup">
       {% if counts.need_file %}<li><a href="/refile?show=unfiled"><span class="n">{{ counts.need_file }}</span> roll{{ 's' if counts.need_file != 1 }} back from the lab to file</a></li>{% endif %}
-      <li><a href="/rolls?stage=need-photo"><span class="n">{{ counts.need_photo }}</span> without a contact sheet</a></li>
+      <li><a href="{{ '/sheets' if counts.need_photo else '/rolls?stage=need-photo' }}"><span class="n">{{ counts.need_photo }}</span> without a contact sheet</a></li>
       {% if counts.need_sheet %}<li><a href="/rolls?stage=need-sheet"><span class="n">{{ counts.need_sheet }}</span> roll{{ 's' if counts.need_sheet != 1 }} on two sleeves missing a sheet</a></li>{% endif %}
       <li><a href="/rolls?stage=need-link"><span class="n">{{ counts.need_link }}</span> contact sheet{{ 's' if counts.need_link != 1 }} not in digiKam yet</a></li>
       <li><a href="/rolls?stage=need-review"><span class="n">{{ counts.need_review }}</span> contact sheet{{ 's' if counts.need_review != 1 }} to review for picks</a></li>
@@ -123,5 +126,7 @@
     {% endfor %}
   </ul>
 </section>
+</details>
+<script>if (matchMedia("(max-width: 640px)").matches) document.getElementById("more").open = false;</script>
 {% endif %}
 {% endblock %}

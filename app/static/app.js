@@ -326,6 +326,9 @@
   photoIn?.addEventListener("cancel", () => (photoByKey = false));
   document.querySelectorAll("input[data-autosubmit]").forEach((i) =>
     i.addEventListener("change", () => i.files.length && i.form.requestSubmit()));
+  document.querySelectorAll("form[data-busy]").forEach((f) =>
+    f.addEventListener("submit", () => document.body.classList.add("busy")));
+  addEventListener("pageshow", () => document.body.classList.remove("busy"));
   const typing = (el) => el?.isContentEditable || (/^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName) && !/^(checkbox|radio|button|submit|file)$/.test(el.type));
   const go = (url) => (location.href = url);
 

@@ -544,3 +544,36 @@ code { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 
 .note-to .btn { flex: 1; }
 .noteform input { width: 100%; font: inherit; font-size: .9rem; padding: .3rem .5rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
 .noteform input:focus { outline: none; border-color: var(--accent); }
+
+.shoot-head h1 { margin: 0 0 .2rem; }
+.meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: .5rem 0 1rem; }
+.meter span { display: block; height: 100%; background: var(--accent); }
+.card.shoot { text-align: center; padding: 1.6rem 1.2rem; }
+.card.shoot .what { font-size: 1.1rem; margin: .4rem 0; }
+.shoot-btn { display: block; margin: 1rem auto .4rem; max-width: 26rem; padding: 1.3rem 1rem; font-size: 1.25rem; }
+.card.shoot input.sr:focus-visible + label, .shot input.sr:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.uploading { display: none; color: var(--accent-ink); font-weight: 500; margin: .4rem 0; }
+.busy .uploading { display: block; }
+.busy .shoot-btn, .busy .shot label { opacity: .45; pointer-events: none; }
+.row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+.row.between { justify-content: space-between; margin-top: .8rem; }
+.card.shot { display: flex; gap: 1rem; align-items: center; }
+.card.shot img { width: 132px; max-height: 110px; object-fit: cover; border-radius: 8px; display: block; border: 1px solid var(--line); }
+.card.shot p { margin: 0 0 .5rem; }
+.upnext { margin-top: 1rem; }
+.upnext summary { cursor: pointer; color: var(--muted); padding: .4rem 0; }
+.upnext a.placeable { text-decoration: none; color: inherit; }
+.upnext a.placeable.on { border-color: var(--accent); }
+.notes-tabs { margin-bottom: .6rem; }
+.sheets-btn .muted { font-weight: 400; }
+.more > summary { display: none; }
+@media (max-width: 640px) {
+  .hero-acts .btn.big.sheets-btn { flex: 1 1 100%; }
+  .flight .card.quiet { display: none; }
+  .more > summary {
+    display: block; cursor: pointer; padding: .8rem 1rem; margin-bottom: 1rem; border: 1px solid var(--line); border-radius: 12px;
+    background: var(--surface); font-weight: 500;
+  }
+  .more[open] > summary { margin-bottom: 1rem; }
+  .card.shot img { width: 96px; }
+}
