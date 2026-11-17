@@ -302,6 +302,123 @@
   if (/Mac|iPhone|iPad/.test(navigator.platform)) document.querySelectorAll("kbd.mod").forEach((k) => (k.textContent = "⌘"));
 
   const page = document.body.dataset.page;
+
+  const batchIn = document.getElementById("batch-in");
+  if (batchIn) {
+    const slots = JSON.parse(document.getElementById("slots").textContent);
+    const box = document.getElementById("batch");
+    const list = document.getElementById("batch-list");
+    const warn = document.getElementById("batch-warn");
+    const status = document.getElementById("batch-status");
+    const save = document.getElementById("batch-save");
+    const shoot = document.querySelector(".card.shoot");
+    let files = [], assign = [], skip = [], urls = [], busy = false, finished = false;
+
+    const label = (s) => [s.sheet ? `${s.id} sheet ${s.sheet}` : s.id, s.where].join(" · ");
+    const reflow = (from) => {
+      let prev = -1;
+      for (let j = from; j >= 0; j--) if (assign[j] >= 0) { prev = assign[j]; break; }
+      for (let j = from + 1; j < files.length; j++) {
+        if (skip[j]) continue;
+        assign[j] = prev + 1 < slots.length ? ++prev : -1;
+      }
+    };
+    const check = () => {
+      const used = assign.filter((a) => a >= 0);
+      const dup = used.find((a, i) => used.indexOf(a) !== i);
+      const n = used.length;
+      warn.hidden = dup === undefined;
+      if (dup !== undefined) warn.textContent = `Two photos are set to ${label(slots[dup])}. Change or skip one.`;
+      save.disabled = busy || n === 0 || dup !== undefined;
+      save.textContent = `Save ${n} sheet${n === 1 ? "" : "s"}`;
+      if (!busy) status.textContent = files.length - n ? `${files.length - n} skipped` : "";
+    };
+    const draw = () => {
+      list.innerHTML = "";
+      files.forEach((f, i) => {
+        const li = document.createElement("li");
+        const img = document.createElement("img");
+        img.src = urls[i];
+        img.alt = `Photo ${i + 1}`;
+        img.loading = "lazy";
+        const sel = document.createElement("select");
+        sel.setAttribute("aria-label", `Roll for photo ${i + 1}`);
+        sel.add(new Option("Skip this photo", "-1"));
+        slots.forEach((s, k) => sel.add(new Option(label(s), String(k))));
+        sel.value = String(assign[i]);
+        sel.addEventListener("change", () => {
+          assign[i] = +sel.value;
+          skip[i] = assign[i] < 0;
+          reflow(i);
+          list.querySelectorAll("select").forEach((s, j) => (s.value = String(assign[j])));
+          list.querySelectorAll(".what").forEach((w, j) => (w.textContent = assign[j] >= 0 ? slots[assign[j]].what : ""));
+          list.querySelectorAll("li").forEach((l, j) => l.classList.toggle("skipped", assign[j] < 0));
+          check();
+        });
+        const meta = document.createElement("div");
+        const what = document.createElement("span");
+        what.className = "what muted small";
+        what.textContent = assign[i] >= 0 ? slots[assign[i]].what : "";
+        const mark = document.createElement("span");
+        mark.className = "mark";
+        meta.append(sel, what, mark);
+        li.append(img, meta);
+        li.classList.toggle("skipped", assign[i] < 0);
+        list.append(li);
+      });
+      check();
+    };
+    const close = () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+      files = []; assign = []; skip = []; urls = [];
+      box.hidden = true;
+      if (shoot) shoot.hidden = false;
+      batchIn.value = "";
+    };
+    batchIn.addEventListener("change", () => {
+      files = [...batchIn.files];
+      if (!files.length) return;
+      urls = files.map((f) => URL.createObjectURL(f));
+      assign = files.map((_, i) => (i < slots.length ? i : -1));
+      skip = files.map(() => false);
+      box.hidden = false;
+      if (shoot) shoot.hidden = true;
+      draw();
+      box.scrollIntoView({ block: "start" });
+    });
+    document.getElementById("batch-cancel").addEventListener("click", () => !busy && close());
+    save.addEventListener("click", async () => {
+      if (finished) return location.reload();
+      if (busy) return;
+      busy = true;
+      list.querySelectorAll("select").forEach((s) => (s.disabled = true));
+      const todo = files.map((f, i) => [f, assign[i], i]).filter(([, a]) => a >= 0);
+      let ok = 0, failed = 0;
+      for (const [f, a, i] of todo) {
+        status.textContent = `Saving ${ok + failed + 1} of ${todo.length}…`;
+        save.disabled = true;
+        const mark = list.children[i].querySelector(".mark");
+        const body = new FormData();
+        body.append("photo", f, f.name || "sheet.jpg");
+        try {
+          const res = await fetch(`/api/rolls/${slots[a].id}/sheet`, { method: "POST", body });
+          if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.status);
+          mark.textContent = "✓";
+          ok++;
+        } catch (e) {
+          mark.textContent = `✗ ${e.message}`;
+          mark.classList.add("bad");
+          failed++;
+        }
+      }
+      busy = false;
+      finished = true;
+      status.textContent = failed ? `${ok} saved, ${failed} failed: those rolls stay in the list.` : `${ok} saved.`;
+      save.textContent = "Done";
+      save.disabled = false;
+    });
+    addEventListener("beforeunload", (e) => busy && e.preventDefault());
+  }
   const filters = document.getElementById("filters");
   document.addEventListener("click", (ev) => {
     if (filters?.open && !filters.contains(ev.target)) filters.open = false;

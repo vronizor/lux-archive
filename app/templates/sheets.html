@@ -57,12 +57,28 @@
     <label for="shoot-in" class="btn primary big shoot-btn">Shoot {{ current.id }}</label>
   </form>
   <p class="uploading" role="status">Uploading and inverting…</p>
+  <input type="file" id="batch-in" accept="image/*" multiple class="sr">
+  <label for="batch-in" class="btn batch-btn">Add from photos…</label>
   <div class="row between">
     <a class="btn small ghost" href="/rolls/{{ current.id }}">Open roll</a>
     {% if after %}<a class="btn small" href="{{ url(binder, after) }}">Skip to {{ after }}</a>{% endif %}
   </div>
 </section>
-<p class="muted small">Lay the sleeve on the light table and shoot it straight on, filling the frame. Rolls come in binder order, sleeve by sleeve; the next one appears as soon as this one is saved.</p>
+<section class="card batch" id="batch" hidden>
+  <div class="batch-head">
+    <h2>Check before saving</h2>
+    <button type="button" class="btn small ghost" id="batch-cancel">Cancel</button>
+  </div>
+  <p class="muted small">Photos in the order you picked them, matched to rolls in binder order. If one is a bad or doubled shot, set it to <em>Skip</em>; change any roll and every photo after it moves along.</p>
+  <p class="batch-warn" id="batch-warn" role="alert" hidden></p>
+  <ol class="batchlist" id="batch-list"></ol>
+  <div class="row between batch-foot">
+    <span class="muted small" id="batch-status"></span>
+    <button type="button" class="btn primary" id="batch-save">Save</button>
+  </div>
+</section>
+<script type="application/json" id="slots">{{ slots | tojson }}</script>
+<p class="muted small">Lay the sleeve on the light table and shoot it straight on, filling the frame. Rolls come in binder order, sleeve by sleeve; the next one appears as soon as this one is saved. For the sharpest sheets, shoot a run in the phone's own camera app and bring them in with <em>Add from photos</em>.</p>
 {% if queue|length > 1 %}
 <details class="upnext">
   <summary>{{ queue|length }} in this list</summary>
