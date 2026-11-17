@@ -577,3 +577,9 @@ code { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-size: 
   .more[open] > summary { margin-bottom: 1rem; }
   .card.shot img { width: 96px; }
 }
+.sheets-link { margin: .3rem 0 0; }
+.hero-acts .sheets-btn { display: none; }
+@media (max-width: 640px) {
+  .hero-acts .btn.big.sheets-btn { display: inline-flex; justify-content: center; }
+  .sheets-link { display: none; }
+}
