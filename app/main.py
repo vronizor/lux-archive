@@ -192,6 +192,7 @@ def home(request: Request, conn=Depends(get_db)):
         strip=stats.strip(groups),
         n_sessions=len(groups),
         recent=conn.execute("SELECT * FROM rolls ORDER BY updated_at DESC LIMIT 5").fetchall(),
+        sheets_left=len(sheet_queue(conn)),
     )
 
 
@@ -615,6 +616,57 @@ def delete_sheet(roll_id: str, n: int, conn=Depends(get_db)):
     r = fetch_roll(conn, roll_id)
     remove_sheet(conn, r["id"], n)
     return RedirectResponse(f"/rolls/{r['id']}#sheets", 303)
+
+
+SHEET_QUEUE_SQL = f"{ARCHIVE_SQL} AND (photographed_at IS NULL OR ({SHEETS_SQL} > 0 AND {SHEETS_SQL} < COALESCE(sleeves, 1)))"
+
+
+def sheet_queue(conn):
+    return conn.execute(
+        f"SELECT * FROM rolls WHERE {SHEET_QUEUE_SQL} ORDER BY binder = '', lower(binder), sleeve IS NULL, sleeve, num"
+    ).fetchall()
+
+
+def sheets_url(binder="", at="", done="", error=""):
+    query = urlencode({k: v for k, v in (("binder", binder), ("at", at), ("done", done), ("error", error)) if v})
+    return "/sheets" + (f"?{query}" if query else "")
+
+
+@app.get("/sheets", response_class=HTMLResponse)
+def sheets_page(request: Request, binder: str = "", at: str = "", done: str = "", error: str = "", conn=Depends(get_db)):
+    everything = sheet_queue(conn)
+    binders = {}
+    for r in everything:
+        binders[r["binder"] or "-"] = binders.get(r["binder"] or "-", 0) + 1
+    if binder not in binders:
+        binder = ""
+    queue = [r for r in everything if not binder or (r["binder"] or "-") == binder]
+    pos = next((i for i, r in enumerate(queue) if r["id"] == at.upper()), 0)
+    current = queue[pos] if queue else None
+    after = queue[pos + 1]["id"] if pos + 1 < len(queue) else ""
+    shot = conn.execute("SELECT * FROM rolls WHERE id=?", (done.upper(),)).fetchone() if done else None
+    shot_n = max(db.sheet_nums(shot["photo"]), default=0) if shot else 0
+    total = conn.execute(f"SELECT COUNT(*) FROM rolls WHERE {ARCHIVE_SQL}").fetchone()[0]
+    return render(
+        request, "sheets.html", binder=binder, binders=binders, queue=queue, current=current, after=after,
+        have=len(db.sheet_nums(current["photo"])) if current else 0, error=error,
+        shot=shot if shot_n else None, shot_n=shot_n, shot_v=view_version(shot) if shot else "",
+        total=total, left=len(everything), url=sheets_url,
+    )
+
+
+@app.post("/sheets/shoot/{roll_id}")
+async def sheets_shoot(
+    roll_id: str, photo: UploadFile = File(...), sheet: int = Form(0), binder: str = Form(""),
+    after: str = Form(""), stay: str = Form(""), conn=Depends(get_db),
+):
+    r = fetch_roll(conn, roll_id)
+    try:
+        save_photo(conn, r["id"], await photo.read(), sheet or None)
+    except Exception:
+        return RedirectResponse(sheets_url(binder, stay or r["id"], error=r["id"]), 303)
+    pending = any(q["id"] == r["id"] for q in sheet_queue(conn))
+    return RedirectResponse(sheets_url(binder, stay or (r["id"] if pending else after), done=r["id"]), 303)
 
 
 @app.get("/photos/{name}")

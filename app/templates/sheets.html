@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Contact sheets · {{ app_name }}{% endblock %}
+{% block page %}sheets{% endblock %}
+{% block main %}
+<div class="shoot-head">
+  <h1>Contact sheets</h1>
+  <p class="edge">{{ total - left }} of {{ total }} rolls done · {{ left }} to go</p>
+  <div class="meter" role="img" aria-label="{{ total - left }} of {{ total }} rolls have their contact sheets"><span style="width: {{ (100 * (total - left) / total) | round(1) if total else 0 }}%"></span></div>
+</div>
+
+{% if binders|length > 1 %}
+<nav class="pills" aria-label="Binder">
+  <a class="pill {{ 'on' if not binder }}" href="/sheets">All <span class="n">{{ left }}</span></a>
+  {% for b, n in binders.items() %}
+  <a class="pill {{ 'on' if binder == b }}" href="{{ url(b) }}">{{ 'Not filed' if b == '-' else b }} <span class="n">{{ n }}</span></a>
+  {% endfor %}
+</nav>
+{% endif %}
+
+{% if error %}<p class="toast err" role="alert">That file for {{ error }} couldn't be read as a photo. Nothing was saved: try again.</p>{% endif %}
+
+{% if shot %}
+<section class="card shot">
+  <a href="/rolls/{{ shot.id }}#sheets" title="Open {{ shot.id }}"><img src="/rolls/{{ shot.id }}/view-{{ shot_n }}.jpg?v={{ shot_v|urlencode }}" alt="Contact sheet {{ shot_n }} of {{ shot.id }}"></a>
+  <div>
+    <p><strong class="rid">{{ shot.id }}</strong> saved{% if shot_n > 1 %} <span class="muted">· sheet {{ shot_n }}</span>{% endif %}. <span class="muted small">Check it's sharp and straight.</span></p>
+    <div class="row">
+      {% for label, n in (('Retake', shot_n), ('Add another sheet', 0)) %}
+      {% if n or not current or shot.id != current.id %}
+      <form method="post" action="/sheets/shoot/{{ shot.id }}" enctype="multipart/form-data" data-busy>
+        <input type="hidden" name="sheet" value="{{ n }}">
+        <input type="hidden" name="binder" value="{{ binder }}">
+        <input type="hidden" name="stay" value="{{ current.id if current else shot.id }}">
+        <input type="file" id="shot-{{ n }}" name="photo" accept="image/*" capture="environment" class="sr" data-autosubmit>
+        <label for="shot-{{ n }}" class="btn small {{ '' if n else 'ghost' }}">{{ label }}</label>
+      </form>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if current %}
+<section class="card lit shoot">
+  <p class="edge big">{{ current.id }}{% if current.filed_at and where(current) %} <span class="tri">▸</span> <span class="sub">{{ where(current) }}</span>{% endif %}</p>
+  <p class="what">{{ current.contents or 'No description yet' }} <span class="muted small">{{ when(current, short=True) }}</span></p>
+  <p class="muted small">
+    {% if (current.sleeves or 1) > 1 %}<strong>Sheet {{ have + 1 }} of {{ current.sleeves }}</strong>: this roll is on {{ current.sleeves }} sleeves, one photo each. {% endif %}
+    {% if not current.filed_at %}Not filed in a binder yet. {% endif %}
+    {% if not current.process %}Film type not set: it will be inverted as colour negative. <a href="/rolls/{{ current.id }}">Set it</a>.{% elif current.process == 'slide' %}Slide film: kept as shot.{% endif %}
+  </p>
+  <form method="post" action="/sheets/shoot/{{ current.id }}" enctype="multipart/form-data" data-busy>
+    <input type="hidden" name="binder" value="{{ binder }}">
+    <input type="hidden" name="after" value="{{ after }}">
+    <input type="file" id="shoot-in" name="photo" accept="image/*" capture="environment" class="sr" data-autosubmit>
+    <label for="shoot-in" class="btn primary big shoot-btn">Shoot {{ current.id }}</label>
+  </form>
+  <p class="uploading" role="status">Uploading and inverting…</p>
+  <div class="row between">
+    <a class="btn small ghost" href="/rolls/{{ current.id }}">Open roll</a>
+    {% if after %}<a class="btn small" href="{{ url(binder, after) }}">Skip to {{ after }}</a>{% endif %}
+  </div>
+</section>
+<p class="muted small">Lay the sleeve on the light table and shoot it straight on, filling the frame. Rolls come in binder order, sleeve by sleeve; the next one appears as soon as this one is saved.</p>
+{% if queue|length > 1 %}
+<details class="upnext">
+  <summary>{{ queue|length }} in this list</summary>
+  <ul class="refilelist">
+    {% for r in queue %}
+    <li><a class="placeable {{ 'on' if r.id == current.id }}" href="{{ url(binder, r.id) }}">
+      <span class="rid">{{ r.id }}</span>
+      <span class="what">{{ r.contents or '—' }}</span>
+      <span class="loc">{{ where(r) if r.filed_at and where(r) else 'not filed' }}</span>
+    </a></li>
+    {% endfor %}
+  </ul>
+</details>
+{% endif %}
+{% else %}
+<section class="card lit empty">
+  <h1>Every roll has its contact sheet.</h1>
+  <p>{{ 'Nothing left in this binder.' if binder else 'Next: look them over and pick what to scan.' }}</p>
+  <a class="btn primary" href="/rolls?stage=need-review">Review contact sheets</a>
+</section>
+{% endif %}
+{% endblock %}

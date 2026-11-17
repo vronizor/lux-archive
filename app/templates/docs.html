@@ -2,6 +2,10 @@
 {% block title %}{{ title }} · {{ app_name }}{% endblock %}
 {% block page %}{{ doc }}{% endblock %}
 {% block main %}
+<nav class="pills notes-tabs" aria-label="Notes">
+  <a class="pill {{ 'on' if doc == 'field' }}" href="/field">Field</a>
+  <a class="pill {{ 'on' if doc == 'docs' }}" href="/docs">Docs</a>
+</nav>
 <article class="card doc">
 {{ body }}
 </article>

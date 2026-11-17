@@ -29,8 +29,7 @@ try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement
   </a>
   <nav>
     <a href="/rolls" class="{{ 'on' if request.url.path.startswith('/rolls') }}">Index</a>
-    <a href="/field" class="{{ 'on' if request.url.path == '/field' }}">Field</a>
-    <a href="/docs" class="docs {{ 'on' if request.url.path == '/docs' }}">Docs</a>
+    <a href="/field" class="{{ 'on' if request.url.path in ('/field', '/docs') }}">Notes</a>
     {% if shooting %}
     <a href="/add" class="{{ 'on' if request.url.path == '/add' }}">File</a>
     <a href="/load" class="add {{ 'on' if request.url.path == '/load' }}">+ Load</a>
@@ -59,8 +58,8 @@ try { var t = localStorage.getItem("lux-theme"); if (t) document.documentElement
     {{ row(['i'], 'Index') }}
     {{ row(['h'], 'Home') }}
     {{ row(['.'], 'Last roll you touched') }}
-    {{ row(['Shift', 'F'], 'Field') }}
-    {{ row(['d'], 'Docs') }}
+    {{ row(['Shift', 'F'], 'Notes: Field') }}
+    {{ row(['d'], 'Notes: Docs') }}
     {{ row(['/'], 'Search the index (a roll number opens that roll)') }}
     {{ row(['t'], 'Light table / darkroom') }}
     {{ row(['?'], 'This card') }}

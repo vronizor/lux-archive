@@ -9,3 +9,4 @@
 - Keep code comments to a minimum. Any Python data transformation uses polars, not pandas (none needed so far).
 - Test locally: `DATA_DIR=/tmp/lux python -m uvicorn app.main:app --port 8411`.
 - Keyboard shortcuts live in `static/app.js`; the `?` card lists them (global rows in `base.html`, page rows in each page's `keys` block). Add or remove a key in both places so the card never lists a dead key.
+- `/sheets` is the phone path for contact sheets (binder order, one tap per roll). On phones the home page shows cameras and that button first; the progress sections sit in a closed `<details>`.
