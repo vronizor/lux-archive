@@ -16,6 +16,7 @@
     {% if last %}
     <p class="last">Last session <strong>{{ last.when }}</strong>: {{ last.what }} <span class="muted">· {{ last.duration }}</span></p>
     {% endif %}
+    {% if sheets_left %}<p class="sheets-link"><a href="/sheets">Shoot contact sheets</a> <span class="muted">· {{ sheets_left }} to go</span></p>{% endif %}
   </div>
   <div class="hero-acts">
     {% if shooting %}
