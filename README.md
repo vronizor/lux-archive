@@ -1,6 +1,6 @@
 # Lux Archive
 
-The master index of Vincent's film rolls: one record per roll, four stages, and a progress page that makes a 20-minute session feel worth it. Film rolls archive past light; this keeps track of them.
+The master index of a film archive: one record per roll, four stages, and a progress page that makes a 20-minute session feel worth it. Film rolls archive past light; this keeps track of them.
 
 - **Roll IDs** (`V001`, `V002`…) are accession numbers: the next free number, assigned once, never changed or reused. They record when a roll entered the archive, not when it was shot. Chronology lives in the date fields — use *By date* in the index.
 - **Stages:** Filed → Contact sheet (sleeve photographed on the light table; every roll gets one) → Linked (`V###_contact-1.jpg` in digiKam) → Scans. Scans hold the frames worth scanning (`4, 9, 17-19`, `none`, `all`) and the frames scanned so far. A roll is done once the first three are ticked and its picks are decided; scanning keeps its own count and can go on afterwards. Frame numbers are the ones printed on the film edge.
@@ -10,6 +10,29 @@ The master index of Vincent's film rolls: one record per roll, four stages, and 
 - **Where** (binder/sleeve) only exists for filed rolls: unticking *Filed* clears it. A roll cut short can take two consecutive sleeves (`B2/88–89`).
 - **Seasons:** Winter YYYY = Dec YYYY – Feb YYYY+1.
 - **Year TBC:** tick it when you're unsure of the year (an unsure season alone doesn't count). The roll still sorts by its best-guess date; *Year TBC* in the index lists them for a later pass.
+
+## Install on your own computer (Mac or Windows)
+
+No server, no terminal. Download the file for your computer from the [latest release](https://github.com/vronizor/lux-archive/releases/latest):
+
+- **Mac with Apple silicon** (2020 or later): `Lux-Archive-mac-apple-silicon.zip`
+- **Older Intel Mac:** `Lux-Archive-mac-intel.zip`
+- **Windows:** `Lux-Archive-windows.zip`
+
+**Mac:** unzip, drag *Lux Archive* into Applications, double-click it. The app isn't signed with Apple, so the first time macOS refuses: open *System Settings → Privacy & Security*, scroll down, click *Open Anyway*. Once.
+
+**Windows:** unzip the folder somewhere it can stay (Documents, say) and double-click *Lux Archive.exe* inside it. The first time, SmartScreen says "Windows protected your PC": *More info → Run anyway*.
+
+Your browser opens on the archive. The app itself has no window: it runs in the background, with a small icon in the menu bar (Mac) or the notification area (Windows) to open the page again or quit. Double-clicking the app again also brings the page back. Then, in **Settings** (the ⚙):
+
+- **Roll letter** first: rolls are numbered with it (`M001`…) and it can't change once a roll exists.
+- **Phone:** turn it on, scan the QR code with the phone on the same Wi-Fi. The phone then shoots contact sheets straight into a roll and shows what's in each camera. It works at home, while the computer is on and the app is running. Away from home it doesn't, unless both devices are on a private network such as Tailscale.
+- **Backup:** choose a folder that syncs somewhere (iCloud Drive, Dropbox). Without one, the only copy of your archive is on this computer.
+- **Notes** (Field and Docs) are your own pages: *Edit this page* at the bottom of each.
+
+**Updating:** a banner appears when a new version is out. Download it, quit the old one, replace it with the new one. The archive lives in a separate folder (shown in Settings) and is never touched by an update.
+
+Builds are made by `.github/workflows/desktop.yml` for every `v*` tag and attached to that tag's release; each one is started and exercised on a real Mac and Windows machine before it is published (`desktop/smoke.py`).
 
 ## Run on the Pi
 
@@ -57,10 +80,12 @@ docker compose exec -T lux python -m app.backup restore /backup
 
 | Variable | Default | |
 | --- | --- | --- |
-| `APP_NAME` | `Lux Archive` | Display name |
+| `APP_NAME` | `Lux Archive` | Display name until one is saved in Settings |
 | `LUX_PORT` | `8410` | Host port (localhost only) |
 | `LUX_PHOTO_MAX` | `0` | Long edge of contact-sheet previews, in px; `0` keeps them full size. Changing it resizes each sheet when its roll page is next opened. The nightly backup always writes 3200 px copies |
 | `BACKUP_DIR` | `../lux-archive-data` | Backup repo checkout, mounted at `/backup` |
+
+Name, roll letter, catalogue name and first binder are edited in the app (⚙ Settings) and stored in the database. `LUX_DESKTOP=1` (set by the desktop launcher, never on the Pi) adds phone pairing, folder backup, the update check, editable Field/Docs and the pairing guard.
 
 ## Stack
 

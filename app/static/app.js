@@ -169,9 +169,9 @@
     const rowFor = (id) => document.querySelector(`.placeable[data-id="${id}"]`);
     const say = (text, warn) => { lastEl.textContent = text; lastEl.classList.toggle("warn", !!warn); };
     const place = async (raw) => {
-      const num = parseInt(String(raw).replace(/^v/i, ""), 10);
+      const num = parseInt(String(raw).replace(/^[a-z]+/i, ""), 10);
       if (!num) return;
-      const id = "V" + String(num).padStart(3, "0");
+      const id = document.body.dataset.prefix + String(num).padStart(3, "0");
       const sleeve = parseInt(sleeveIn.value, 10) || 1;
       try {
         const res = await post(`/api/rolls/${id}/place`, { binder, sleeve, sleeves: twoIn.checked ? 2 : 1 });
@@ -329,6 +329,17 @@
   document.querySelectorAll("form[data-busy]").forEach((f) =>
     f.addEventListener("submit", () => document.body.classList.add("busy")));
   addEventListener("pageshow", () => document.body.classList.remove("busy"));
+  document.querySelectorAll("button[data-pick]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      try {
+        const res = await (await fetch(`/desktop/pick?kind=${b.dataset.pick}`, { method: "POST" })).json();
+        if (res.path) document.getElementById(b.dataset.target).value = res.path;
+        else if (res.error) alert(res.error);
+      } finally {
+        b.disabled = false;
+      }
+    }));
   const typing = (el) => el?.isContentEditable || (/^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName) && !/^(checkbox|radio|button|submit|file)$/.test(el.type));
   const go = (url) => (location.href = url);
 

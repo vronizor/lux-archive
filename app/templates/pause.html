@@ -1,0 +1,11 @@
+{% extends "_plain.html" %}
+{% block head %}{% if restarting %}<meta http-equiv="refresh" content="3;url=/settings#phone">{% endif %}{% endblock %}
+{% block main %}
+{% if restarting %}
+<h1>One moment…</h1>
+<p>{{ app_name }} is restarting to apply the change.</p>
+{% else %}
+<h1>{{ app_name }} has stopped</h1>
+<p>You can close this tab. Open the app again whenever you want to get back to your archive.</p>
+{% endif %}
+{% endblock %}

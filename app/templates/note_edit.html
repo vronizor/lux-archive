@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ title }} · {{ app_name }}{% endblock %}
+{% block main %}
+<form class="card noteedit" method="post" action="/notes/{{ doc }}">
+  <h1>Edit {{ title }}</h1>
+  <p class="muted small">Markdown: <code># Title</code>, <code>## Section</code>, <code>- list</code>, <code>**bold**</code>, tables with <code>| a | b |</code>. A line with <code>[TOC]</code> becomes the table of contents.</p>
+  <textarea name="text" spellcheck="true" aria-label="{{ title }} text">{{ text }}</textarea>
+  <div class="row">
+    <button class="btn primary">Save</button>
+    <a class="btn" href="/{{ doc }}">Cancel</a>
+    {% if custom %}<button class="btn ghost" name="action" value="reset" onclick="return confirm('Throw away your version and go back to the starting text?')">Back to the starting text</button>{% endif %}
+  </div>
+</form>
+{% endblock %}

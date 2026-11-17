@@ -88,7 +88,7 @@
         <button class="btn small">Pick</button>
       </form>
     </div>
-    <p class="muted small">Downloads are full-size positives, ready to drop into this roll's digiKam folder.{% if r.process == 'slide' %} Slide film: no inversion.{% elif not r.process %} Film type not set, converted as colour.{% endif %}</p>
+    <p class="muted small">Downloads are full-size positives, ready to drop into this roll's {{ cfg.catalog }} folder.{% if r.process == 'slide' %} Slide film: no inversion.{% elif not r.process %} Film type not set, converted as colour.{% endif %}</p>
     {% else %}
     <p class="muted">No contact sheet yet. Lay the sleeve on the light table and shoot it straight on, filling the frame.</p>
     {% endif %}

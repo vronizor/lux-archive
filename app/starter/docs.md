@@ -1,0 +1,85 @@
+# How the archive works
+
+Habits, conventions and rough processes. This is a starting point: rewrite it to match how you work (*Edit this page*, at the bottom, on the computer).
+
+[TOC]
+
+## One roll, start to finish
+
+1. **File.** The roll gets the next free number, goes into the next sleeve of the current binder, and gets a season and a few words of contents.
+2. **Contact sheet.** Photograph the sleeve on the light table. For a run of them, use *Shoot contact sheets* on the home page: it walks the binder sleeve by sleeve, one tap per roll, and shows the last one so you can retake it. A single sheet can also be uploaded on the roll's page. Every roll gets one, including rolls a lab already scanned. A roll spread over two sleeves gets one sheet per sleeve: *Add a sheet* on the roll page. For a roll marked *Takes 2 sleeves*, the stage only ticks itself once both sheets are in; until then it shows *sheet missing*, and the index has a *Missing a sheet* filter. It's how you check the lab didn't skip frames.
+3. **Link.** Download `%PREFIX%012_contact-1.jpg` (and `-2`, … if the roll has more sheets) from the roll page, put it in the roll's %CATALOG% folder, tick *Linked*. From then on the roll exists in %CATALOG% even if nothing else is ever scanned.
+4. **Review.** Look at the contact sheet and write down the frames worth scanning, or `none`, or `all`. Quickest with the loupe (`z`): read the number on the film edge, type it, Enter. Typing it again takes it out.
+5. **Scan.** Whenever, in any order, a few frames at a time. Each scan goes straight into the roll's %CATALOG% folder; tap the frame on the roll page.
+
+A roll counts as **done** after step 4. Scanning keeps its own count (frames left to scan), so a roll with nothing worth scanning still finishes.
+
+## Before the archive: shooting
+
+New rolls enter %APP% when you load them, not when you file them.
+
+1. **Load** (`/load`, from the phone). Camera, stock, and the EI you'll shoot at (blank = box speed). The roll gets the next number on the spot: write it on the canister. Forgot to log it? Tick *Already unloaded*.
+   While shooting, jot things down from the roll's *In camera* card on the home page. Type, then tap **+ Contents** for what's on the roll ("Anna's birthday", appended with a comma) or **+ Note** for how it was shot ("frames 12–14 overexposed", "tried a red filter", one line each). Enter adds to contents.
+2. **Unloaded.** Tap it on the home page. The roll joins the *Next lab batch*, which can sit there for weeks.
+3. **Sent.** *Send to lab* marks the whole batch at once, with the lab's name. The batch list shows each roll's EI so you can tell the lab what to push.
+4. **Back.** The roll enters the archive, unfiled, and the steps below take over.
+
+Disposable cameras work the same way: load them with the camera as `Disposable` (or its brand) and the stock printed on the box.
+
+Dates fill themselves: loading sets the start season, unloading the end. Rolls that aren't back yet stay out of the archive counts and the progress chart; the index shows them with a tag and the *Not back yet* filter.
+
+## Conventions
+
+| What | Convention |
+| --- | --- |
+| Roll ID | `%PREFIX%001`, `%PREFIX%002`… Accession order, not shooting order. Never renumbered, never reused. New rolls are numbered at loading, so from now on accession order follows shooting order. |
+| EI | The speed the roll was shot at. Blank means box speed. Anything else means the lab pushed or pulled it. |
+| Dates | Season + year. Winter YYYY = Dec YYYY – Feb YYYY+1. Tick *Year TBC* when the year is a guess. |
+| Where | Binder + sleeve number, only once the roll is filed: unticking *Filed* clears it, and typing a binder on an unfiled roll ticks *Filed*. One roll per sleeve. A roll cut into short strips takes two consecutive sleeves (*Takes 2 sleeves*), shown as `B2/88–89`; keep both in the same binder. |
+| Frame numbers | As printed on the film edge: `00`, `0`, `1` … `36`, with an `A` mark between each (`14`, `14A`, `15`). Use the number that sits nearest the middle of the frame; if a number falls on the gap between two frames, use the other one. The edge print repeats at the same pitch as the camera's frames, so a roll whose frames line up with the `A` marks stays that way: pick ranges like `9A–15A`. Never the scan order. |
+| Contact sheet file | `%PREFIX%012_contact-1.jpg` (positive), always numbered, `-2` for a second sheet. The negative is `%PREFIX%012_contact-1_neg.jpg` if you ever want it. Removing a sheet doesn't renumber the others. |
+| Scan files | Frame number exactly as printed, never padded: `%PREFIX%012_00.jpg`, `%PREFIX%012_0.jpg`, `%PREFIX%012_4.jpg`, `%PREFIX%012_14A.jpg`. Padding would turn frame 0 into `00` and collide with the real frame 00. Turn on natural sorting in your catalogue or file browser if it has it, so `_4` comes before `_14`. A re-scan of the same frame: `%PREFIX%012_14_v2.jpg`. |
+| %CATALOG% folders | One folder per roll, named after the roll ID: `%PREFIX%012/`. |
+| Lab scans | Put the lab's folder name in *Lab scan folder*. When linking, rename the files to `%PREFIX%012_FF` by matching them against the contact sheet, then set scans to `all`. |
+
+### Writing picks
+
+- `4, 9, 17-19, 22A`: a list; ranges and spaces are fine.
+- `none`: nothing worth scanning.
+- `all`: the whole roll.
+- Blank: not reviewed yet.
+- `0` and `00` are real frames, on their own or in a list: `0` means frame 0, not “nothing”.
+- Scanning a frame that isn't in the picks adds it to the picks.
+
+## Shooting a contact sheet
+
+- Light table on, room lights dimmed, so the clear sleeve doesn't pick up reflections.
+- Phone parallel to the sleeve, sleeve filling the frame, sleeve flat.
+- Lock exposure on the film, not on the bright gaps around it.
+- Check the edge numbers are readable before moving on: picks depend on them.
+- Upload straight from the phone. The app keeps the full-size original and makes a positive.
+
+The positive is a quick conversion (invert, remove the orange mask, stretch each channel). Good enough to judge frames, not a scan. Set the film type (Colour / B&W / Slide) on the roll: slides aren't inverted, and the conversion is redone when you change it.
+
+## Scanning
+
+- Scan all the picks from one roll in one sitting rather than a frame at a time; every extra trip out of the sleeve is a chance for dust and scratches.
+- Handle strips by the edges; blow dust off before scanning.
+- After a sitting, tap the scanned frames on the roll page (or type them), then *Save scans*.
+
+## Twenty-minute sessions
+
+Small units that each move a counter on the home page:
+
+- file the rolls from one envelope;
+- shoot contact sheets for one binder page;
+- link a batch of contact sheets in %CATALOG%;
+- review five contact sheets;
+- scan the picks of one roll.
+
+## Where things live
+
+- **Index and contact sheets:** in %APP%'s data folder on this computer (Settings shows where). Full-size originals are kept, plus a positive made from each.
+- **Backup:** set a backup folder in Settings and a full copy is written there once a day. Without one, the only copy is on this computer.
+- **%CATALOG%:** contact sheets and scans, one folder per roll. Getting a contact sheet there is manual: download it from the roll page, drop it in the folder, tick *Linked*.
+- **Phone:** Settings → Phone pairs a phone on your home Wi-Fi, for shooting contact sheets and for the *In camera* cards.
